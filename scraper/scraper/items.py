@@ -4,23 +4,31 @@
 # https://docs.scrapy.org/en/latest/topics/items.html
 
 import scrapy
-from scrapy.http import Response
 
 
 class Review(scrapy.Item):
+    movie_uid = scrapy.Field()
     url = scrapy.Field()
     score = scrapy.Field()
+    tite = scrapy.Field()
     text = scrapy.Field()
 
 
 class Movie(scrapy.Item):
-    url = scrapy.Field()
+    class Metadata(scrapy.Item):
+        url = scrapy.Field()
+        image_url = scrapy.Field()
+        page_title = scrapy.Field()
+
     title = scrapy.Field()
     description = scrapy.Field()
     release = scrapy.Field()
     duration = scrapy.Field()
     genres = scrapy.Field()
-    rating = scrapy.Field()
     score = scrapy.Field()
-    actors = scrapy.Field()
-    reviews = list[Review]
+    
+    director = scrapy.Field()
+    actors = scrapy.Field()  # type: List[str]
+    
+    plot = scrapy.Field()
+    metadata = scrapy.Field()  # type: Metadata
