@@ -47,6 +47,7 @@ class ScraperPipeline:
                 score text,
                 director text,
                 actors text,
+                plot text,
                 metadata_url text,
                 metadata_image_url text,
                 metadata_page_title text
@@ -66,8 +67,8 @@ class ScraperPipeline:
 
     def movieItem(self, item):
         self.cur.execute("""
-            INSERT INTO movies (title, description, release, duration, genres, score, director, actors, metadata_url, metadata_image_url, metadata_page_title) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO movies (title, description, release, duration, genres, score, director, actors, plot, metadata_url, metadata_image_url, metadata_page_title) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             item["title"],
             item["description"],
@@ -77,6 +78,7 @@ class ScraperPipeline:
             item["score"],
             item["director"],
             ','.join(item["actors"]),
+            item["plot"],
             item["metadata"]["url"],
             item["metadata"]["image_url"],
             item["metadata"]["page_title"]
