@@ -12,7 +12,7 @@ from scrapy.exceptions import DropItem
 
 from .items import Movie, Plot
 
-class ScraperPipeline:
+class PostgresPipeline:
 
     def __init__(self):
         load_dotenv()
