@@ -3,7 +3,7 @@ from typing import Any, Generator
 from urllib.parse import urlparse, parse_qs
 
 import scrapy
-from scrapy.http import Response
+from scrapy.http import Response, Request
 
 from .utils import parse_duration, datestr_to_iso
 from ..items import Movie, Review
@@ -80,7 +80,7 @@ class MetacriticSpider(scrapy.Spider):
         """
         return f"{self.DOMAIN}/movie/{movie_slug}/user-reviews"
 
-    def next_page(self, response: Response) -> scrapy.Request:
+    def next_page(self, response: Response) -> Request:
         """
         Given a browse page, return a `Request` for the next page.
         """
@@ -89,7 +89,7 @@ class MetacriticSpider(scrapy.Spider):
         current_page = int(query_params["page"][0])
         return response.follow(f"{self.BASE_BROWSE_URL}?page={current_page + 1}", callback=self.parse_browse_page)
 
-    def parse_browse_page(self, response: Response) -> Generator[scrapy.Request, None, None]:
+    def parse_browse_page(self, response: Response) -> Generator[Request, None, None]:
         """
         Parse a browse page, yielding a `Request` for each movie in the page and a `Request` for the next page.
         """

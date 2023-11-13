@@ -4,7 +4,7 @@ import scrapy
 from scrapy.http import Response
 
 from .utils import parse_duration, datestr_to_iso
-from ..items import Review, Movie
+from ..items import Review, Movie, Plot
 
 
 class IMDBSpider(scrapy.Spider):
@@ -92,10 +92,10 @@ class IMDBSpider(scrapy.Spider):
         page_title = response.xpath("//title/text()").get()
         return Movie.Metadata(url=url, image_url=image_url, page_title=page_title)
 
-    def parse_plot(self, response: Response) -> str:
+    def parse_plot(self, response: Response, movie_id: str) -> str:
         plot = response.xpath(
             "//div[@data-testid='sub-section-synopsis']//div[@class='ipc-html-content-inner-div']//text()").getall()
-        yield {"text": ''.join(plot)}
+        yield Plot(movie_id=movie_id, text=''.join(plot))
 
     def parse_movie(self, response: Response) -> Movie:
         """
@@ -130,7 +130,7 @@ class IMDBSpider(scrapy.Spider):
 
     def parse(self, response: Response, **kwargs):
         # top 250 movies
-        movies = response.css("a.ipc-title-link-wrapper::attr(href)").getall()
+        movies = response.css("div.fEQdZD a.ipc-title-link-wrapper::attr(href)").getall()
         for movie in movies:
             # movie is "/title/tt0000001/"
             movie_slug = movie.split("/")[2]
@@ -141,8 +141,5 @@ class IMDBSpider(scrapy.Spider):
 
             # yield the plot item, it must be processed by the pipeline
             plot_url = f"{self.domain}/title/{movie_slug}/plotsummary/"
-            yield response.follow(plot_url, callback=self.parse_plot)
-
-            # extract the reviews for the movie  # reviews_url = self.reviews_api_url(movie_slug)  # yield response.follow(reviews_url, callback=self.extract_reviews)
-
-        # # yield self.extract_information(response)  # yield from self.extract_reviews(response)  #  # next_movie_url = self.next_movie_url(response.url)  # yield scrapy.Request(next_movie_url, callback=self.parse)
+            yield response.follow(plot_url, callback=self.parse_plot,
+                                  cb_kwargs={"movie_id": self.get_movie_id(movie_url)})

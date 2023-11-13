@@ -3,34 +3,51 @@
 # See documentation in:
 # https://docs.scrapy.org/en/latest/topics/items.html
 
+from dataclasses import dataclass
+
 import scrapy
 
 
+@dataclass
 class Review(scrapy.Item):
-    movie_id = scrapy.Field()
-    url = scrapy.Field()
-    score = scrapy.Field()
-    tite = scrapy.Field()
-    text = scrapy.Field()
+    movie_id: str
+    url: str
+    score: float
+    title: str
+    text: str
 
 
-class Movie(scrapy.Item):
-    class Metadata(scrapy.Item):
-        url = scrapy.Field()
-        image_url = scrapy.Field()
-        page_title = scrapy.Field()
+@dataclass
+class Movie:
+    @dataclass
+    class Metadata:
+        url: str
+        image_url: str
+        page_title: str
 
-    movie_id = scrapy.Field()
+    movie_id: str
 
-    title = scrapy.Field()
-    description = scrapy.Field()
-    release = scrapy.Field()
-    duration = scrapy.Field()
-    genres = scrapy.Field()
-    score = scrapy.Field()
+    title: str
+    description: str
+    release: str  # use datestr_to_iso
+    duration: int
+    genres: list[str]
+    score: float
+
+    director: str
+    actors: list[str]
+
+    metadata: Metadata
+
+    plot: str = ""  # set by pipeline (MergePipeline)
+
+
+@dataclass
+class Plot:
+    """
+    A plot item for a movie.
     
-    director = scrapy.Field()
-    actors = scrapy.Field()  # type: List[str]
-    
-    plot = scrapy.Field()
-    metadata = scrapy.Field()  # type: Metadata
+    The pipeline will merge this with the movie item.
+    """
+    movie_id: str
+    text: str
