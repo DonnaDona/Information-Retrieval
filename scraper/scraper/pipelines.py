@@ -6,6 +6,8 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 
+from .items import Movie
+
 
 class ScraperPipeline:
 
@@ -83,7 +85,7 @@ class ScraperPipeline:
     def process_item(self, item, spider):
 
         # check if item is a movie or a review
-        if "description" in item:
+        if isinstance(item, Movie):
             self.movieItem(item)
         else:
             self.reviewItem(item)
