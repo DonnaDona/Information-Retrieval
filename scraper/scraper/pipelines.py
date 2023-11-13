@@ -8,6 +8,9 @@ from dotenv import load_dotenv
 
 from .items import Movie
 
+from scrapy.exceptions import DropItem
+
+from .items import Movie, Plot
 
 class ScraperPipeline:
 
@@ -100,3 +103,48 @@ class ScraperPipeline:
         ## Close cursor & connection to database
         self.cur.close()
         self.connection.close()
+
+
+class MergePipeline:
+    """
+    Merge Movie and Plot objects into a single Movie object.
+
+    This pipeline is responsible for keeping a Movie object until its Plot object is found.
+    They are then merged and the Movie object is yielded.
+    """
+
+    def __init__(self):
+        self.movies: dict[str, Movie] = {}
+        self.plots: dict[str, Plot] = {}
+
+    @staticmethod
+    def get_key(item: Movie or Plot) -> str:
+        return item.movie_id
+
+    def process_movie(self, item: Movie):
+        key = self.get_key(item)
+        if key in self.plots:
+            item.plot = self.plots[key].text
+            del self.plots[key]
+            return item
+        else:
+            self.movies[key] = item
+            raise DropItem()
+
+    def process_plot(self, item: Plot):
+        key = self.get_key(item)
+        if key in self.movies:
+            movie = self.movies[key]
+            movie.plot = item.text
+            del self.movies[key]
+            return movie
+        else:
+            self.plots[key] = item
+            raise DropItem()
+
+    def process_item(self, item, spider):
+        if isinstance(item, Movie):
+            return self.process_movie(item)
+        elif isinstance(item, Plot):
+            return self.process_plot(item)
+        return item
