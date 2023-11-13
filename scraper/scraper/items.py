@@ -7,7 +7,7 @@ import scrapy
 
 
 class Review(scrapy.Item):
-    movie_uid = scrapy.Field()
+    movie_id = scrapy.Field()
     url = scrapy.Field()
     score = scrapy.Field()
     tite = scrapy.Field()
@@ -19,6 +19,8 @@ class Movie(scrapy.Item):
         url = scrapy.Field()
         image_url = scrapy.Field()
         page_title = scrapy.Field()
+
+    movie_id = scrapy.Field()
 
     title = scrapy.Field()
     description = scrapy.Field()

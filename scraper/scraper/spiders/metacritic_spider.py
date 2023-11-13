@@ -5,22 +5,8 @@ from urllib.parse import urlparse, parse_qs
 import scrapy
 from scrapy.http import Response
 
+from .utils import parse_duration, datestr_to_iso
 from ..items import Movie, Review
-
-
-def parse_duration(duration_str: str) -> int:
-    """
-    Parse a duration string, returning the duration in minutes.
-
-    :param duration_str: the duration string, e.g. "1 h 30 min"
-    :return: the duration in minutes
-    """
-    parts = duration_str.split()
-    hours = int(parts[0])
-    minutes = int(parts[2])
-
-    tot_minutes = hours * 60 + minutes
-    return tot_minutes
 
 
 def parse_movie_details(response: Response):
@@ -32,9 +18,8 @@ def parse_movie_details(response: Response):
     """
     get_detail = lambda idx: response.css("div.c-movieDetails_sectionContainer")[idx].xpath("(./span)[2]/text()").get()
 
-    release = get_detail(1)
+    release = datestr_to_iso(get_detail(1))
     duration = parse_duration(get_detail(2))
-    rating = get_detail(3)
     genres = response.css("div.c-movieDetails_sectionContainer")[4].xpath("./ul/li//span/text()").getall()
     genres = list(map(str.strip, genres))
 

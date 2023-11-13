@@ -23,3 +23,24 @@ def parse_duration(duration_str: str) -> int:
 
     tot_minutes = hours * 60 + minutes
     return tot_minutes
+
+
+class AtomicId:
+    """
+    A class that generates unique IDs.
+    """
+
+    def __init__(self):
+        import threading
+        self._id = 0
+        self._lock = threading.Lock()
+
+    def next(self):
+        """
+        Return the next ID.
+        :return: the next ID
+        """
+        with self._lock:
+            self._id += 1
+            return self._id
+

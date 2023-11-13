@@ -60,7 +60,7 @@ class IMDBSpider(scrapy.Spider):
         rest_url = current_movie_url.split("/")[5:]
         return f"{self.domain}/title/tt{next_movie_id}/{'/'.join(rest_url)}"
 
-    def extract_reviews(self, response: Response, movie: Movie, extracted: int = 0) -> Generator[Review, None, None]:
+    def extract_reviews(self, response: Response, extracted: int = 0) -> Generator[Review, None, None]:
         """
         Extract the reviews from a movie page.
 
@@ -84,23 +84,18 @@ class IMDBSpider(scrapy.Spider):
         if extracted < self.REVIEWS_LIMIT and next_datakey:
             next_datakey = next_datakey.get()
             next_url = self.reviews_api_url(f"tt{current_movie_id}", next_datakey)
-            yield response.follow(next_url, callback=self.extract_reviews,
-                                  cb_kwargs={"movie": movie, "extracted": extracted})
+            yield response.follow(next_url, callback=self.extract_reviews, cb_kwargs={"extracted": extracted})
 
     def parse_metadata(self, response: Response) -> Movie.Metadata:
-        url = response.xpath("//link[@rel='canonical']/@href")
-        image_url = response.xpath("//meta[@property='og:image']/@content")
-        page_title = response.xpath("//title/text()")
+        url = response.xpath("//link[@rel='canonical']/@href").get()
+        image_url = response.xpath("//meta[@property='og:image']/@content").get()
+        page_title = response.xpath("//title/text()").get()
         return Movie.Metadata(url=url, image_url=image_url, page_title=page_title)
 
-    def retrieve_plot(self, movie_response: Response):
-        def parse_plot(response: Response) -> str:
-            plot = response.xpath("//ul[@id='plot-synopsis-content']/li/text()")
-            return plot
-
-        movie_id = self.get_movie_id(movie_response.url)
-        plot_url = f"{self.domain}/title/tt{movie_id}/plotsummary"
-        yield movie_response.follow(plot_url, callback=parse_plot)
+    def parse_plot(self, response: Response) -> str:
+        plot = response.xpath(
+            "//div[@data-testid='sub-section-synopsis']//div[@class='ipc-html-content-inner-div']//text()").getall()
+        yield {"text": ''.join(plot)}
 
     def parse_movie(self, response: Response) -> Movie:
         """
@@ -111,10 +106,11 @@ class IMDBSpider(scrapy.Spider):
         """
         movie_id = self.get_movie_id(response.url)
         title = response.css("span.benbRT::text").get()
-        description = response.xpath("//meta[@property='og:description']/@content")
+        description = response.xpath("//meta[@name='description']/@content").get()
 
-        release_date_str = (response.xpath("//section[@cel_widget_id='StaticFeature_Details']").css(
-            "a.ipc-metadata-list-item__list-content-item::text").get())
+        release_date_str = response.xpath("//section[@cel_widget_id='StaticFeature_Details']").css(
+            "a.ipc-metadata-list-item__list-content-item::text").get()
+        release_date_str = release_date_str.split("(")[0].strip()
         release_date = datestr_to_iso(release_date_str)
 
         duration_str = ''.join(response.xpath("//section[@cel_widget_id='StaticFeature_TechSpecs']").css(
@@ -127,12 +123,10 @@ class IMDBSpider(scrapy.Spider):
         director = response.css("div.fhVOeP a::text")[0].get()
         actors = response.css("a.gCQkeh::text").getall()
 
-        plot = self.retrieve_plot(response).__next__()
-
         metadata = self.parse_metadata(response)
 
-        return Movie(movie_id=movie_id, title=title, description=description, release=release_date, duration=duration,
-                     genres=genres, score=score, director=director, actors=actors, plot=plot, metadata=metadata)
+        yield Movie(movie_id=movie_id, title=title, description=description, release=release_date, duration=duration,
+                    genres=genres, score=score, director=director, actors=actors, metadata=metadata)
 
     def parse(self, response: Response, **kwargs):
         # top 250 movies
@@ -142,10 +136,13 @@ class IMDBSpider(scrapy.Spider):
             movie_slug = movie.split("/")[2]
 
             # extract information about the movie?
-            yield self.parse_movie(response)
+            movie_url = f"{self.domain}{movie}"
+            yield response.follow(movie_url, callback=self.parse_movie)
 
-            # extract the reviews for the movie
-            url = self.reviews_api_url(movie_slug)
-            yield response.follow(url, callback=self.extract_reviews)
+            # yield the plot item, it must be processed by the pipeline
+            plot_url = f"{self.domain}/title/{movie_slug}/plotsummary/"
+            yield response.follow(plot_url, callback=self.parse_plot)
+
+            # extract the reviews for the movie  # reviews_url = self.reviews_api_url(movie_slug)  # yield response.follow(reviews_url, callback=self.extract_reviews)
 
         # # yield self.extract_information(response)  # yield from self.extract_reviews(response)  #  # next_movie_url = self.next_movie_url(response.url)  # yield scrapy.Request(next_movie_url, callback=self.parse)
