@@ -18,10 +18,10 @@ class PostgresPipeline:
     def __init__(self):
         load_dotenv()
 
-        hostname = os.environ.get("DB_HOST")
-        username = os.environ.get("DB_USER")
-        password = os.environ.get("DB_PASSWORD")
-        database = os.environ.get("DB_NAME")
+        hostname = os.environ["DB_HOST"]
+        username = os.environ["DB_USER"]
+        password = os.environ["DB_PASSWORD"]
+        database = os.environ["DB_NAME"]
 
         ## Create/Connect to database
         self.connection = psycopg2.connect(host=hostname, user=username, password=password, dbname=database)

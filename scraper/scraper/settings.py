@@ -7,6 +7,11 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
 BOT_NAME = "scraper"
 
 SPIDER_MODULES = ["scraper.spiders"]
@@ -61,10 +66,13 @@ COOKIES_ENABLED = False
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-ITEM_PIPELINES = {
-    "scraper.pipelines.MergePipeline": 100,
-    "scraper.pipelines.PostgresPipeline": 200,
-}
+
+ITEM_PIPELINES = {"scraper.pipelines.MergePipeline": 100, }
+
+USE_POSTGRESQL = os.getenv("USE_POSTGRES", "false").lower() != "false"
+
+if USE_POSTGRESQL:
+    ITEM_PIPELINES["scraper.pipelines.PostgresPipeline"] = 200
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html

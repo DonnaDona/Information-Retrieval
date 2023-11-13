@@ -117,7 +117,7 @@ class IMDBSpider(scrapy.Spider):
             "div.ipc-metadata-list-item__content-container::text").getall())
         duration = parse_duration(duration_str)
 
-        genres = response.xpath("//div[@data-testid='genres']//a[@class='ipc-chip']/span/text()").getall()
+        genres = response.xpath("//div[@data-testid='genres']").css("a.ipc-chip span::text").getall()
         score = float(response.css("span.cMEQkK::text").get())
 
         director = response.css("div.fhVOeP a::text")[0].get()
