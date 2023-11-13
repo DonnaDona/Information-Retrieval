@@ -62,8 +62,8 @@ COOKIES_ENABLED = False
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    "scraper.pipelines.MergePipeline": 1000,
-    "scraper.pipelines.PostgresPipeline": 300,
+    "scraper.pipelines.MergePipeline": 100,
+    "scraper.pipelines.PostgresPipeline": 200,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

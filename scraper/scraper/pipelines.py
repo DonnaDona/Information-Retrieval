@@ -6,11 +6,12 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 
-from .items import Movie
+from .items import Movie, Review
 
 from scrapy.exceptions import DropItem
 
 from .items import Movie, Plot
+
 
 class PostgresPipeline:
 
@@ -32,9 +33,9 @@ class PostgresPipeline:
         self.cur.execute("""
             CREATE TABLE IF NOT EXISTS reviews(
                 id serial PRIMARY KEY, 
-                url text,
-                score int,
-                title text,
+                url text NOT NULL,
+                score float4,
+                title varchar (255) NOT NULL,
                 content text
             )
             """)
@@ -42,58 +43,41 @@ class PostgresPipeline:
         self.cur.execute("""
             CREATE TABLE IF NOT EXISTS movies(
                 id serial PRIMARY KEY, 
-                title text,
+                title varchar (255) NOT NULL,
                 description text,
                 release date,
-                duration text,
-                genres text,
-                score text,
-                director text,
-                actors text,
+                duration smallint,
+                genres varchar (128) [],
+                score float4,
+                director varchar (255),
+                actors varchar (255) [],
                 plot text,
-                metadata_url text,
+                metadata_url text UNIQUE NOT NULL,
                 metadata_image_url text,
-                metadata_page_title text
+                metadata_page_title varchar (255)
             )
             """)
 
-    def reviewItem(self, item):
+    def process_review(self, item: Review):
         self.cur.execute("""
             INSERT INTO reviews (url, score, title, content) 
             VALUES (%s, %s, %s, %s)
-        """, (
-            item["url"],
-            item["score"],
-            item["title"],
-            item["content"]
-        ))
+        """, (item.url, item.score, item.title, item.text))
 
-    def movieItem(self, item):
+    def process_movie(self, item: Movie):
         self.cur.execute("""
             INSERT INTO movies (title, description, release, duration, genres, score, director, actors, plot, metadata_url, metadata_image_url, metadata_page_title) 
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
-            item["title"],
-            item["description"],
-            item["release"],
-            item["duration"],
-            ','.join(item["genres"]),
-            item["score"],
-            item["director"],
-            ','.join(item["actors"]),
-            item["plot"],
-            item["metadata"]["url"],
-            item["metadata"]["image_url"],
-            item["metadata"]["page_title"]
-        ))
+            item.title, item.description, item.release, item.duration, item.genres, item.score, item.director,
+            item.actors, item.plot, item.metadata.url, item.metadata.image_url, item.metadata.page_title))
 
     def process_item(self, item, spider):
-
         # check if item is a movie or a review
         if isinstance(item, Movie):
-            self.movieItem(item)
+            self.process_movie(item)
         else:
-            self.reviewItem(item)
+            self.process_review(item)
 
         # Execute insert of data into the database
         self.connection.commit()
