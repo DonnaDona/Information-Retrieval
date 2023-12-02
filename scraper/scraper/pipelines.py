@@ -49,6 +49,7 @@ class PostgresPipeline:
                 duration smallint,
                 genres varchar (128) [],
                 score float4,
+                critic_score float4,
                 director varchar (255),
                 actors varchar (255) [],
                 plot text,
@@ -73,15 +74,20 @@ class PostgresPipeline:
             item.actors, item.plot, item.metadata.url, item.metadata.image_url, item.metadata.page_title))
 
     def process_item(self, item, spider):
-        # check if item is a movie or a review
-        if isinstance(item, Movie):
-            self.process_movie(item)
+        try:
+            # check if item is a movie or a review
+            if isinstance(item, Movie):
+                self.process_movie(item)
+            else:
+                self.process_review(item)
+        except Exception as e:
+            print("Error while inserting into database: ", e)
+            self.connection.rollback()
+            return None
         else:
-            self.process_review(item)
-
-        # Execute insert of data into the database
-        self.connection.commit()
-        return item
+            # Execute insert of data into the database
+            self.connection.commit()
+            return item
 
     def close_spider(self, spider):
         ## Close cursor & connection to database
@@ -127,8 +133,14 @@ class MergePipeline:
             raise DropItem()
 
     def process_item(self, item, spider):
+        if isinstance(item, Movie) and item.plot:
+            return item  # no need to merge, the plot is already there
+
+        # If the plot is not already contained in the movie, merge it with a plot request
         if isinstance(item, Movie):
             return self.process_movie(item)
         elif isinstance(item, Plot):
             return self.process_plot(item)
+
+        # No match, just return the item
         return item

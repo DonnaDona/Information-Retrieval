@@ -33,6 +33,7 @@ class Movie:
     duration: int
     genres: list[str]
     score: float
+    critic_score: float
 
     director: str
     actors: list[str]

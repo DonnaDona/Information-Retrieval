@@ -1,15 +1,20 @@
-from typing import Generator
+from typing import Generator, Iterable, Any
 
 import scrapy
 from scrapy.http import Response
 
-from .utils import parse_duration, datestr_to_iso
+from .utils import parse_duration, datestr_to_iso, try_func
 from ..items import Review, Movie, Plot
 
 
 class IMDBSpider(scrapy.Spider):
     name = "imdb"
-    domain = "https://www.imdb.com"
+
+    _DOMAIN = "https://www.imdb.com"
+
+    start_urls = ["https://www.imdb.com/search/title/?title_type=feature,tv_movie&count=250"]
+
+    REVIEWS_LIMIT = 1000  # The API returns at most 1000 reviews
 
     def reviews_api_url(self, movie_slug, datakey=None):
         """
@@ -19,14 +24,10 @@ class IMDBSpider(scrapy.Spider):
         :param datakey: the offset of the reviews to return, expressed as a string found in the HTML of reviews page
         :return: the URL of the API
         """
-        url = f"{self.domain}/title/{movie_slug}/reviews/_ajax?sort=reviewVolume&dir=desc&ratingFilter=0"
+        url = f"{self._DOMAIN}/title/{movie_slug}/reviews/_ajax?sort=reviewVolume&dir=desc&ratingFilter=0"
         if datakey:
             url = f"{url}&dataKey={datakey}"
         return url
-
-    start_urls = ["https://www.imdb.com/chart/top/?ref_=nv_mv_250"]
-
-    REVIEWS_LIMIT = 1000  # The API returns at most 1000 reviews
 
     def get_movie_id(self, url: str) -> str:
         """
@@ -58,7 +59,7 @@ class IMDBSpider(scrapy.Spider):
         current_movie_id = self.get_movie_id(current_movie_url)
         next_movie_id = self.next_movie_id(current_movie_id[2:])
         rest_url = current_movie_url.split("/")[5:]
-        return f"{self.domain}/title/tt{next_movie_id}/{'/'.join(rest_url)}"
+        return f"{self._DOMAIN}/title/tt{next_movie_id}/{'/'.join(rest_url)}"
 
     def extract_reviews(self, response: Response, extracted: int = 0) -> Generator[Review, None, None]:
         """
@@ -76,7 +77,7 @@ class IMDBSpider(scrapy.Spider):
             permalink = review.xpath(".//div[@class='actions text-muted']/a/@href").get()
             if score and text and permalink:
                 extracted += 1
-                yield Review(url=f"{self.domain}{permalink}", movie_id=self.get_movie_id(response.url), score=score,
+                yield Review(url=f"{self._DOMAIN}{permalink}", movie_id=self.get_movie_id(response.url), score=score,
                              text=text)
         next_datakey = response.xpath("//div[@class='load-more-data']/@data-key")
 
@@ -92,10 +93,13 @@ class IMDBSpider(scrapy.Spider):
         page_title = response.xpath("//title/text()").get()
         return Movie.Metadata(url=url, image_url=image_url, page_title=page_title)
 
-    def parse_plot(self, response: Response, movie_id: str) -> str:
+    def parse_plot(self, response: Response, movie_id: str, similar_movies: list[str]):
         plot = response.xpath(
             "//div[@data-testid='sub-section-synopsis']//div[@class='ipc-html-content-inner-div']//text()").getall()
         yield Plot(movie_id=movie_id, text=''.join(plot))
+
+        for movie_relative_url in similar_movies:
+            yield response.follow(self._DOMAIN + movie_relative_url, callback=self.parse_movie)
 
     def parse_movie(self, response: Response) -> Movie:
         """
@@ -105,7 +109,7 @@ class IMDBSpider(scrapy.Spider):
         :return: a `Movie` for the movie
         """
         movie_id = self.get_movie_id(response.url)
-        title = response.css("span.benbRT::text").get()
+        title = response.css("h1 ::text").get()
         description = response.xpath("//meta[@name='description']/@content").get()
 
         release_date_str = response.xpath("//section[@cel_widget_id='StaticFeature_Details']").css(
@@ -118,28 +122,32 @@ class IMDBSpider(scrapy.Spider):
         duration = parse_duration(duration_str)
 
         genres = response.xpath("//div[@data-testid='genres']").css("a.ipc-chip span::text").getall()
-        score = float(response.css("span.cMEQkK::text").get())
+        score = float(response.css("span.cMEQkK::text").get() or float('nan'))
 
-        director = response.css("div.fhVOeP a::text")[0].get()
+        director = response.css("ul.title-pc-list").css("a::text").get()
         actors = response.css("a.gCQkeh::text").getall()
 
         metadata = self.parse_metadata(response)
 
+        similar_movies = response.xpath("//div[@data-testid='shoveler-items-container']").css(
+            "a.ipc-poster-card__title--clickable::attr(href)").getall()
+
         yield Movie(movie_id=movie_id, title=title, description=description, release=release_date, duration=duration,
                     genres=genres, score=score, director=director, actors=actors, metadata=metadata)
+        yield response.follow(f"{self._DOMAIN}/title/tt{movie_id}/plotsummary/", callback=self.parse_plot,
+                              cb_kwargs={"movie_id": movie_id, "similar_movies": similar_movies})
 
-    def parse(self, response: Response, **kwargs):
-        # top 250 movies
-        movies = response.css("div.fEQdZD a.ipc-title-link-wrapper::attr(href)").getall()
-        for movie in movies:
-            # movie is "/title/tt0000001/"
-            movie_slug = movie.split("/")[2]
+    def parse_movie_list(self, response: Response, start: int = 0):
+        movie_urls = response.css("a.ipc-title-link-wrapper::attr(href)").getall()
 
-            # extract information about the movie?
-            movie_url = f"{self.domain}{movie}"
-            yield response.follow(movie_url, callback=self.parse_movie)
+        for relative_url in movie_urls:
+            # url: /title/tt0000001/
+            relative_url = relative_url.split("?")[0][:-1]
+            url = self._DOMAIN + relative_url
+            yield response.follow(url + "/", callback=self.parse_movie)
 
-            # yield the plot item, it must be processed by the pipeline
-            plot_url = f"{self.domain}/title/{movie_slug}/plotsummary/"
-            yield response.follow(plot_url, callback=self.parse_plot,
-                                  cb_kwargs={"movie_id": self.get_movie_id(movie_url)})
+        # no next page: the loading is with javascript  # if not ab:  #     next_page = self._DOMAIN + response.css("a.lister-page-next::attr(href)").get()  # else:  #     next_page = self.start_urls[0] + "&start=" + str(start + 250)  # if next_page:  #     if self._DOMAIN not in next_page:  #         next_page = self._DOMAIN + next_page  #     yield response.follow(next_page, callback=self.parse_movie_list, cb_kwargs={"start": start + 250})
+
+    def parse(self, response: Response, **kwargs: Any) -> Any:
+        if response.url == self.start_urls[0]:
+            yield from self.parse_movie_list(response)

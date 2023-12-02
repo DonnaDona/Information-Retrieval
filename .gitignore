@@ -68,6 +68,8 @@ instance/
 # Scrapy stuff:
 .scrapy
 scraper/out/
+# Scrapy spiders saved data
+scraper/crawls
 
 # Sphinx documentation
 docs/_build/
