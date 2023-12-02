@@ -17,12 +17,28 @@ def parse_duration(duration_str: str) -> int:
     :param duration_str: the duration string, e.g. "1 h 30 min"
     :return: the duration in minutes
     """
+    if not duration_str:
+        return -1
+
     parts = duration_str.split()
+    if len(parts) < 4:
+        if "minutes" in duration_str:
+            return int(parts[0])
+        else:
+            return int(parts[0]) * 60
+
     hours = int(parts[0])
     minutes = int(parts[2])
 
     tot_minutes = hours * 60 + minutes
     return tot_minutes
+
+
+def try_func(func):
+    try:
+        return func()
+    except:
+        return None
 
 
 class AtomicId:
@@ -43,4 +59,3 @@ class AtomicId:
         with self._lock:
             self._id += 1
             return self._id
-
