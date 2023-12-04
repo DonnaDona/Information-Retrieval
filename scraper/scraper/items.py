@@ -6,6 +6,7 @@
 from dataclasses import dataclass
 
 import scrapy
+from typing import List
 
 
 @dataclass
@@ -31,12 +32,12 @@ class Movie:
     description: str
     release: str  # use datestr_to_iso
     duration: int
-    genres: list[str]
+    genres: List[str]
     score: float
     critic_score: float
 
     director: str
-    actors: list[str]
+    actors: List[str]
 
     metadata: Metadata
 
