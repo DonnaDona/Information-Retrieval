@@ -23,6 +23,7 @@ class Movie:
     @dataclass
     class Metadata:
         url: str
+        source_name: str
         image_url: str
         page_title: str
 

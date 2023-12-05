@@ -74,9 +74,12 @@ class MetacriticSpider(scrapy.Spider):
         """
         Parse a browse page, yielding a `Request` for each movie in the page and a `Request` for the next page.
         """
-        for movie_url in response.xpath("//div[@class='c-productListings']//a/@href").extract():
+        movie_urls = response.xpath("//div[@class='c-productListings']//a/@href").extract()
+        for movie_url in movie_urls:
             yield response.follow(f"{self.DOMAIN}{movie_url}", callback=self.parse_movie, priority=1)
-        yield self.next_page(response)
+
+        if len(movie_urls) > 0:
+            yield self.next_page(response)
 
     def parse(self, response: Response, **kwargs: Any) -> Any:
         """
@@ -97,7 +100,7 @@ class MetacriticSpider(scrapy.Spider):
         url = response.xpath("//link[@rel='canonical']/@href").get()
         image_url = response.xpath("//meta[@property='og:image']/@content").get()
         page_title = response.xpath("//title/text()").get()
-        return Movie.Metadata(url=url, image_url=image_url, page_title=page_title)
+        return Movie.Metadata(url=url, image_url=image_url, page_title=page_title, source_name="Metacritic")
 
     def parse_movie(self, response: Response):
         """
@@ -113,24 +116,27 @@ class MetacriticSpider(scrapy.Spider):
         description = response.xpath("//meta[@name='description']/@content").get()
         plot = description
 
+        # find the div.c-movieDetails_sectionContainer that contains a span with the text "Release Date"
+        # then get the text of the next sibling
         release_date_str = response.xpath(
-            "//div[contains(@class, 'c-movieDetails')]//div[contains(span, 'Release Date')]/span[2]/text()") \
-            .get()
+            "//div[contains(@class, 'c-movieDetails_sectionContainer')]//span[contains(text(), 'Release Date')]/following-sibling::span/text()").get()
         release_date = datestr_to_iso(release_date_str, "%b %d, %Y")
 
-        duration_str = response.xpath("//div[contains(@class, 'c-heroMetadata')]//li[4]/span/text()").get().strip()
+        duration_str = response.xpath(
+            "//div[contains(@class, 'c-movieDetails_sectionContainer')]//span[contains(text(), 'Duration')]/following-sibling::span/text()").get()
         duration = parse_duration(duration_str)
 
         genres = response.xpath("//ul[contains(@class, 'c-genreList')]//span/text()")
         genres = list(set(genres.get().strip() for genres in genres))
 
-        critic_score = float(response.xpath(
-            "//div[contains(@class, 'c-siteReviewScore_background-critic_medium')]//span/text()").get()) / 10 \
-            or float('nan')
+        critic_score_str = response.xpath(
+            "//div[contains(@class, 'c-siteReviewScore_background-critic_medium')]//span/text()").get()
+        critic_score = float(critic_score_str) / 10 if critic_score_str and critic_score_str.isnumeric() else float(
+            'nan')
 
-        user_score = float(
-            response.xpath("//div[contains(@class, 'c-siteReviewScore_background-user')]//span/text()").get() or float(
-                'nan'))
+        user_score_str = response.xpath(
+            "//div[contains(@class, 'c-siteReviewScore_background-user')]//span/text()").get()
+        user_score = float(user_score_str) if user_score_str and user_score_str.isnumeric() else float('nan')
 
         director = response.xpath("//div[contains(@class, 'c-productDetails_staff_directors')]//a/text()").get().strip()
 
@@ -139,6 +145,6 @@ class MetacriticSpider(scrapy.Spider):
 
         metadata = self.parse_metadata(response)
 
-        yield Movie(movie_id=movie_id, title=title, description=description, release=release_date, duration=duration,
-                    genres=genres, score=user_score, critic_score=critic_score, director=director, actors=actors,
-                    metadata=metadata, plot=plot)
+        return Movie(movie_id=movie_id, title=title, description=description, release=release_date, duration=duration,
+                     genres=genres, score=user_score, critic_score=critic_score, director=director, actors=actors,
+                     metadata=metadata, plot=plot)

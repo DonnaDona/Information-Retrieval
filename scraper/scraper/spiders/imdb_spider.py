@@ -96,7 +96,7 @@ class IMDBSpider(scrapy.Spider):
         url = response.xpath("//link[@rel='canonical']/@href").get()
         image_url = response.xpath("//meta[@property='og:image']/@content").get()
         page_title = response.xpath("//title/text()").get()
-        return Movie.Metadata(url=url, image_url=image_url, page_title=page_title)
+        return Movie.Metadata(url=url, image_url=image_url, page_title=page_title, source_name="IMDb")
 
     def parse_plot(self, response: Response, movie_id: str):
         plot = response.xpath(
