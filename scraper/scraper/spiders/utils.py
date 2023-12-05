@@ -1,4 +1,4 @@
-def datestr_to_iso(datestr):
+def datestr_to_iso(datestr, fmt='%B %d, %Y'):
     """
     Convert date string to ISO format.
 
@@ -6,7 +6,7 @@ def datestr_to_iso(datestr):
     :return: date string in ISO format
     """
     from datetime import datetime
-    date = datetime.strptime(datestr, '%B %d, %Y')
+    date = datetime.strptime(datestr, fmt)
     return date.isoformat()
 
 
@@ -22,7 +22,7 @@ def parse_duration(duration_str: str) -> int:
 
     parts = duration_str.split()
     if len(parts) < 4:
-        if "minutes" in duration_str:
+        if "minutes" in duration_str or "m" in duration_str:
             return int(parts[0])
         else:
             return int(parts[0]) * 60
