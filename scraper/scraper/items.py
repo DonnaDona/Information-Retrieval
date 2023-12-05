@@ -42,6 +42,7 @@ class Movie:
     metadata: Metadata
 
     plot: str = ""  # set by pipeline (MergePipeline)
+    wait_for_plot: bool = False # checked by pipeline (MergePipeline)
 
 
 @dataclass

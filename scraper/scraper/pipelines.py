@@ -5,7 +5,9 @@
 import os
 
 import psycopg2
+import scrapy
 from dotenv import load_dotenv
+from scrapy import Spider
 from scrapy.exceptions import DropItem
 
 from .items import Movie, Plot
@@ -78,7 +80,9 @@ class PostgresPipeline:
         """, (item.title, item.description, item.release, item.duration, item.genres, item.score, item.director,
               item.actors, item.plot, item.metadata.url, item.metadata.image_url, item.metadata.page_title))
 
-    def process_item(self, item, spider, retried=False):
+    def process_item(self, item, spider: Spider, retried=False):
+        if spider.name != "imdb":
+            return item
         try:
             # check if item is a movie or a review
             if isinstance(item, Movie):
@@ -144,7 +148,7 @@ class MergePipeline:
             raise DropItem()
 
     def process_item(self, item, spider):
-        if isinstance(item, Movie) and item.plot:
+        if isinstance(item, Movie) and (item.plot or not item.wait_for_plot):
             return item  # no need to merge, the plot is already there
 
         # If the plot is not already contained in the movie, merge it with a plot request
