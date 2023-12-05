@@ -109,7 +109,7 @@ class IMDBSpider(scrapy.Spider):
 
         yield Plot(movie_id=movie_id, text=''.join(plot))
 
-    def parse_movie(self, response: Response, depth: int) -> Generator[Movie | scrapy.Request, None, None]:
+    def parse_movie(self, response: Response, depth: int) -> Generator[Any, None, None]:
         """
         Parse a movie page, yielding a `Movie` for the movie.
 
