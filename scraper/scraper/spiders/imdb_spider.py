@@ -101,6 +101,12 @@ class IMDBSpider(scrapy.Spider):
     def parse_plot(self, response: Response, movie_id: str):
         plot = response.xpath(
             "//div[@data-testid='sub-section-synopsis']//div[@class='ipc-html-content-inner-div']//text()").getall()
+
+        if not plot:
+            summaries = response.xpath(
+                "//div[@data-testid='sub-section-summaries']//li//div[@class='ipc-html-content-inner-div']/text()").getall()
+            plot = max(summaries, key=len)
+
         yield Plot(movie_id=movie_id, text=''.join(plot))
 
     def parse_movie(self, response: Response, depth: int) -> Generator[Movie | scrapy.Request, None, None]:
@@ -145,7 +151,7 @@ class IMDBSpider(scrapy.Spider):
 
                 yield Movie(movie_id=movie_id, title=title, description=description, release=release_date,
                             duration=duration, genres=genres, score=score, critic_score=score, director=director,
-                            actors=actors, metadata=metadata)
+                            actors=actors, metadata=metadata, wait_for_plot=True)
 
                 yield response.follow(f"{self._DOMAIN}/title/tt{movie_id}/plotsummary/", callback=self.parse_plot,
                                       priority=2,  # highest priority: the plot is the most important information now
