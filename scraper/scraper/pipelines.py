@@ -3,21 +3,18 @@
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 import os
+
 import psycopg2
 from dotenv import load_dotenv
-
-from .items import Movie, Review
-
 from scrapy.exceptions import DropItem
 
 from .items import Movie, Plot
+from .items import Review
 
 
 class PostgresPipeline:
 
-    def __init__(self):
-        load_dotenv()
-
+    def __setup_connection__(self):
         hostname = os.environ["DB_HOST"]
         username = os.environ["DB_USER"]
         password = os.environ["DB_PASSWORD"]
@@ -28,6 +25,14 @@ class PostgresPipeline:
 
         ## Create cursor, used to execute commands
         self.cur = self.connection.cursor()
+
+    def __init__(self):
+        load_dotenv()
+
+        self.connection = None
+        self.cur = None
+
+        self.__setup_connection__()
 
         ## Create quotes table if none exists
         self.cur.execute("""
@@ -55,7 +60,8 @@ class PostgresPipeline:
                 plot text,
                 metadata_url text UNIQUE NOT NULL,
                 metadata_image_url text,
-                metadata_page_title varchar (255)
+                metadata_page_title varchar (255),
+                CONSTRAINT superkey_crosswebsite UNIQUE (title, director, release)
             )
             """)
 
@@ -69,17 +75,22 @@ class PostgresPipeline:
         self.cur.execute("""
             INSERT INTO movies (title, description, release, duration, genres, score, director, actors, plot, metadata_url, metadata_image_url, metadata_page_title) 
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            item.title, item.description, item.release, item.duration, item.genres, item.score, item.director,
-            item.actors, item.plot, item.metadata.url, item.metadata.image_url, item.metadata.page_title))
+        """, (item.title, item.description, item.release, item.duration, item.genres, item.score, item.director,
+              item.actors, item.plot, item.metadata.url, item.metadata.image_url, item.metadata.page_title))
 
-    def process_item(self, item, spider):
+    def process_item(self, item, spider, retried=False):
         try:
             # check if item is a movie or a review
             if isinstance(item, Movie):
                 self.process_movie(item)
             else:
                 self.process_review(item)
+        except psycopg2.InterfaceError as e:
+            print("Connection to database lost: ", e)
+            self.__setup_connection__()
+            if not retried:
+                return self.process_item(item, spider, retried=True)
+            return None
         except Exception as e:
             print("Error while inserting into database: ", e)
             self.connection.rollback()
