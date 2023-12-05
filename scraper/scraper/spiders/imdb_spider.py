@@ -1,14 +1,19 @@
-from typing import Generator, Iterable, Any
+import logging
+from random import random, shuffle
+from typing import Generator, Any
 
 import scrapy
 from scrapy.http import Response
 
-from .utils import parse_duration, datestr_to_iso, try_func
+from .utils import parse_duration, datestr_to_iso
 from ..items import Review, Movie, Plot
 
 
 class IMDBSpider(scrapy.Spider):
     name = "imdb"
+
+    RANDOM_WALK = True
+    RANDOM_WALK_PROBABILITY = 0.025  # probability of following a random link instead of the next one
 
     _DOMAIN = "https://www.imdb.com"
 
@@ -93,58 +98,94 @@ class IMDBSpider(scrapy.Spider):
         page_title = response.xpath("//title/text()").get()
         return Movie.Metadata(url=url, image_url=image_url, page_title=page_title)
 
-    def parse_plot(self, response: Response, movie_id: str, similar_movies: list[str]):
+    def parse_plot(self, response: Response, movie_id: str):
         plot = response.xpath(
             "//div[@data-testid='sub-section-synopsis']//div[@class='ipc-html-content-inner-div']//text()").getall()
         yield Plot(movie_id=movie_id, text=''.join(plot))
 
-        for movie_relative_url in similar_movies:
-            yield response.follow(self._DOMAIN + movie_relative_url, callback=self.parse_movie)
-
-    def parse_movie(self, response: Response) -> Movie:
+    def parse_movie(self, response: Response, depth: int) -> Generator[Movie | scrapy.Request, None, None]:
         """
         Parse a movie page, yielding a `Movie` for the movie.
 
         :param response: the response of the movie page
+        :param depth: The depth of the current request. Each time a linked is followed in the "similar movies" section,
+                      the depth increases.
         :return: a `Movie` for the movie
         """
         movie_id = self.get_movie_id(response.url)
-        title = response.css("h1 ::text").get()
-        description = response.xpath("//meta[@name='description']/@content").get()
-
-        release_date_str = response.xpath("//section[@cel_widget_id='StaticFeature_Details']").css(
-            "a.ipc-metadata-list-item__list-content-item::text").get()
-        release_date_str = release_date_str.split("(")[0].strip()
-        release_date = datestr_to_iso(release_date_str)
-
-        duration_str = ''.join(response.xpath("//section[@cel_widget_id='StaticFeature_TechSpecs']").css(
-            "div.ipc-metadata-list-item__content-container::text").getall())
-        duration = parse_duration(duration_str)
-
-        genres = response.xpath("//div[@data-testid='genres']").css("a.ipc-chip span::text").getall()
-        score = float(response.css("span.cMEQkK::text").get() or float('nan'))
-
-        director = response.css("ul.title-pc-list").css("a::text").get()
-        actors = response.css("a.gCQkeh::text").getall()
-
-        metadata = self.parse_metadata(response)
+        page_type = response.xpath("//meta[@property='og:type']/@content")
 
         similar_movies = response.xpath("//div[@data-testid='shoveler-items-container']").css(
             "a.ipc-poster-card__title--clickable::attr(href)").getall()
+        shuffle(similar_movies)  # increase randomness
 
-        yield Movie(movie_id=movie_id, title=title, description=description, release=release_date, duration=duration,
-                    genres=genres, score=score, director=director, actors=actors, metadata=metadata)
-        yield response.follow(f"{self._DOMAIN}/title/tt{movie_id}/plotsummary/", callback=self.parse_plot,
-                              cb_kwargs={"movie_id": movie_id, "similar_movies": similar_movies})
+        if page_type and page_type.get() == "video.movie":
+            try:
+                title = response.css("h1 ::text").get()
+                description = response.xpath("//meta[@name='description']/@content").get()
+
+                release_date_str = response.xpath("//section[@cel_widget_id='StaticFeature_Details']").css(
+                    "a.ipc-metadata-list-item__list-content-item::text").get()
+                release_date_str = release_date_str.split("(")[0].strip()
+                release_date = datestr_to_iso(release_date_str)
+
+                duration_str = ''.join(response.xpath("//section[@cel_widget_id='StaticFeature_TechSpecs']").css(
+                    "div.ipc-metadata-list-item__content-container::text").getall())
+                duration = parse_duration(duration_str)
+
+                genres = response.xpath("//div[@data-testid='genres']").css("a.ipc-chip span::text").getall()
+                score = float(response.css("span.cMEQkK::text").get() or float('nan'))
+
+                director = response.css("ul.title-pc-list").css("a::text").get()
+                actors = response.css("a.gCQkeh::text").getall()
+
+                metadata = self.parse_metadata(response)
+
+                logging.info(f"Movie {movie_id} parsed (depth {depth})")
+
+                yield Movie(movie_id=movie_id, title=title, description=description, release=release_date,
+                            duration=duration, genres=genres, score=score, critic_score=score, director=director,
+                            actors=actors, metadata=metadata)
+
+                yield response.follow(f"{self._DOMAIN}/title/tt{movie_id}/plotsummary/", callback=self.parse_plot,
+                                      priority=2,  # highest priority: the plot is the most important information now
+                                      cb_kwargs={"movie_id": movie_id})
+            except Exception as e:
+                # the movie could not be parsed, but the walk should continue
+                logging.error(f"Error while parsing movie {movie_id}: {e}")
+
+        # Both movie information and plot were scraped, go to the next movie
+        if self.RANDOM_WALK:
+            if (len(self.movies_list) > 0  # There is actually a race condition here, but it should be fine
+                    and random() < self.RANDOM_WALK_PROBABILITY):
+                yield response.follow(self.movies_list.pop(), callback=self.parse_movie, priority=1,
+                                      cb_kwargs={"depth": 0})
+                logging.info("Following random link instead of the next one")
+
+        for movie_relative_url in similar_movies:
+            logging.info(f"Following similar movie {movie_relative_url}")
+            yield response.follow(self._DOMAIN + movie_relative_url, callback=self.parse_movie, priority=-depth,
+                                  cb_kwargs={"depth": depth + 1})
 
     def parse_movie_list(self, response: Response, start: int = 0):
         movie_urls = response.css("a.ipc-title-link-wrapper::attr(href)").getall()
+
+        shuffle(movie_urls)
+
+        if self.RANDOM_WALK:
+            # if the random walk is enabled, only the first movie is parsed; after this, there is a probability
+            # (1 - RANDOM_WALK_PROBABILITY) of exploring the similar movies of the current movie, and a probability
+            # RANDOM_WALK_PROBABILITY of following a random link in self.movies_list.
+            self.movies_list = [self._DOMAIN + movie_url for movie_url in reversed(movie_urls)]
+            # suffle the movies list
+            yield response.follow(self.movies_list.pop(), callback=self.parse_movie, priority=1, cb_kwargs={"depth": 0})
+            return
 
         for relative_url in movie_urls:
             # url: /title/tt0000001/
             relative_url = relative_url.split("?")[0][:-1]
             url = self._DOMAIN + relative_url
-            yield response.follow(url + "/", callback=self.parse_movie)
+            yield response.follow(url + "/", callback=self.parse_movie, priority=1, cb_kwargs={"depth": 0})
 
         # no next page: the loading is with javascript  # if not ab:  #     next_page = self._DOMAIN + response.css("a.lister-page-next::attr(href)").get()  # else:  #     next_page = self.start_urls[0] + "&start=" + str(start + 250)  # if next_page:  #     if self._DOMAIN not in next_page:  #         next_page = self._DOMAIN + next_page  #     yield response.follow(next_page, callback=self.parse_movie_list, cb_kwargs={"start": start + 250})
 
