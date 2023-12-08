@@ -13,7 +13,7 @@ class IMDBSpider(scrapy.Spider):
     name = "imdb"
 
     RANDOM_WALK = True
-    RANDOM_WALK_PROBABILITY = 0.025  # probability of following a random link instead of the next one
+    RANDOM_WALK_PROBABILITY = 0.05  # probability of following a random link instead of the next one
 
     _DOMAIN = "https://www.imdb.com"
 
@@ -105,7 +105,10 @@ class IMDBSpider(scrapy.Spider):
         if not plot:
             summaries = response.xpath(
                 "//div[@data-testid='sub-section-summaries']//li//div[@class='ipc-html-content-inner-div']/text()").getall()
-            plot = max(summaries, key=len)
+            if not summaries or len(summaries) == 0:
+                plot = ""
+            else:
+                plot = max(summaries, key=len)
 
         yield Plot(movie_id=movie_id, text=''.join(plot))
 
@@ -132,6 +135,7 @@ class IMDBSpider(scrapy.Spider):
 
                 # release_year_str is the first a child of the ul adjacent to the h1
                 release_year_str = response.xpath("//h1/following-sibling::ul//a/text()").get()
+
                 release_year = int(release_year_str)
 
                 duration_str = ''.join(response.xpath("//section[@cel_widget_id='StaticFeature_TechSpecs']").css(

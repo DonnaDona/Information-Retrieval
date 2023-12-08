@@ -1,7 +1,7 @@
-# Define your item pipelines here
+## PIPELINES
 #
-# Don't forget to add your pipeline to the ITEM_PIPELINES setting
-# See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
+# Order of the pipelines:
+# MergePipeline -> FormatPipeline -> PostgresPipeline
 import os
 
 import psycopg2
@@ -51,14 +51,14 @@ class PostgresPipeline:
                 id serial PRIMARY KEY, 
                 title varchar (255) NOT NULL,
                 description text,
-                release date,
+                release int,
                 duration smallint,
                 genres varchar (128) [],
-                director varchar (255),
+                directors varchar (255) [],
                 actors varchar (255) [],
                 plot text,
                 image_url text,
-                CONSTRAINT superkey_crosswebsite UNIQUE (title, director, release)
+                CONSTRAINT superkey_crosswebsite UNIQUE (title, directors, release)
             )
             """)
 
@@ -96,15 +96,15 @@ class PostgresPipeline:
         if not isinstance(item, Movie):
             raise ValueError("Item must be a Movie")
         self.cur.execute("""
-            SELECT id, description, plot FROM movies WHERE title = %s AND director = %s AND release = %s
-        """, (item.title, item.director, item.release))
+            SELECT id, description, plot, genres FROM movies WHERE title = %s AND directors = %s::varchar[] AND release = %s
+        """, (item.title, item.directors, item.release))
         movie = self.cur.fetchone()
 
         if movie is None:
             self.cur.execute("""
-                INSERT INTO movies (title, description, release, duration, genres, director, actors, plot, image_url) 
+                INSERT INTO movies (title, description, release, duration, genres, directors, actors, plot, image_url) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-            """, (item.title, item.description, item.release, item.duration, item.genres, item.director, item.actors,
+            """, (item.title, item.description, item.release, item.duration, item.genres, item.directors, item.actors,
                   item.plot, item.metadata.image_url))
 
             movie_id = self.cur.fetchone()[0]
@@ -119,9 +119,13 @@ class PostgresPipeline:
         movie_id = movie[0]
         db_description = movie[1]
         db_plot = movie[2]
+        db_genre = movie[3]
 
         item.description = item.description if len(item.description) > len(db_description) else db_description
         item.plot = item.plot if len(item.plot) > len(db_plot) else db_plot
+
+        # merge the genres
+        item.genres = list(set(item.genres + db_genre))
 
         # coalesce the data in the movie
         self.cur.execute("""
@@ -129,12 +133,12 @@ class PostgresPipeline:
                 description = COALESCE(description, %s),
                 duration = COALESCE(duration, %s),
                 genres = COALESCE(genres, %s),
-                director = COALESCE(director, %s),
+                directors = COALESCE(directors, %s),
                 actors = COALESCE(actors, %s),
                 plot = COALESCE(plot, %s),
                 image_url = COALESCE(image_url, %s)
             WHERE id = %s
-        """, (item.description, item.duration, item.genres, item.director, item.actors, item.plot,
+        """, (item.description, item.duration, item.genres, item.directors, item.actors, item.plot,
               item.metadata.image_url, movie_id))
 
         self.cur.execute("""
@@ -249,5 +253,7 @@ class FormatPipeline:
             item.genres = sorted(item.genres)
             item.actors = sorted(item.actors)
             item.directors = sorted(item.directors)
-            return item
+
+            if item.plot == item.description:
+                item.plot = ""
         return item

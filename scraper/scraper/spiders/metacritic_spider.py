@@ -101,7 +101,8 @@ class MetacriticSpider(scrapy.Spider):
         description = response.xpath("//meta[@name='description']/@content").get()
         plot = ""  # avoid duplicate plot/description
 
-        release_year_str = response.css("div.c-heroVariant_headerInfo")[0].xpath(".//span/text()").get().strip()
+        release_year_str = response.css("div.c-heroVariant_headerInfo")[0].css("li.c-heroMetadata_item").xpath(
+            ".//span/text()").get().strip()
         release_year = int(release_year_str)
 
         duration_str = response.xpath(
@@ -121,6 +122,8 @@ class MetacriticSpider(scrapy.Spider):
 
         directors = response.css("div.c-productDetails_staff_directors")[0].css("a::text").getall()
         directors = [director.strip() for director in directors]
+        # directors could contain "," at the end of the name, remove it
+        directors = [director[:-1] if director.endswith(",") else director for director in directors]
 
         actors = response.xpath("//div[contains(@data-cy, 'cast-')]//h3/text()")
         actors = list(set(actors.get().strip() for actors in actors))
