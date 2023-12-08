@@ -1,11 +1,10 @@
 import json
-import logging
 from typing import Any
 
 import scrapy
 from scrapy.http import Response
 
-from .utils import datestr_to_iso, parse_duration
+from .utils import parse_duration
 from ..items import Movie
 
 
@@ -28,9 +27,9 @@ class RottenTomatoesSpider(scrapy.Spider):
         audience_score = float('nan')
 
         if "tomatometerScore" in scoreboard and "value" in scoreboard["tomatometerScore"]:
-            critic_score = float(scoreboard["tomatometerScore"]["value"])
+            critic_score = float(scoreboard["tomatometerScore"]["value"]) / 10
         if "audienceScore" in scoreboard and "value" in scoreboard["audienceScore"]:
-            audience_score = float(scoreboard["audienceScore"]["value"])
+            audience_score = float(scoreboard["audienceScore"]["value"]) / 10
 
         return critic_score, audience_score
 
@@ -44,10 +43,8 @@ class RottenTomatoesSpider(scrapy.Spider):
             movie_info = response.xpath("//ul[@id='info']")
             movie_info_selector = lambda title: movie_info.xpath(f"//li[contains(.//b/text(), '{title}')]//span")
 
-            release_str = movie_info_selector("Release Date (Theaters):").xpath("./time/@datetime").get()
-            if not release_str:
-                release_str = movie_info_selector("Release Date (Streaming):").xpath("./time/@datetime").get()
-            release = datestr_to_iso(release_str, "%b %d, %Y")
+            release_year_str = response.xpath("//p[@slot='info']/text()").get().split(",")[0].strip()
+            release_year = int(release_year_str)  # if the year is not an int it's something else, i.e. let it throw
 
             genre = movie_info_selector("Genre:").xpath("./text()").get()
             genre = [g.strip() for g in genre.split(",")]
@@ -57,7 +54,7 @@ class RottenTomatoesSpider(scrapy.Spider):
             duration_str = duration_str.replace("m", " m").replace("h", " h")
             duration = parse_duration(duration_str)
 
-            director = movie_info_selector("Director:").xpath("./a/text()").get()
+            directors = movie_info_selector("Director:").xpath("./a/text()").getall()
 
             critic_score, audience_score = self.parse_scores(response)
 
@@ -67,14 +64,16 @@ class RottenTomatoesSpider(scrapy.Spider):
                                       source_name="Rotten Tomatoes")
 
             plot = response.xpath("//p[@data-qa='movie-info-synopsis']/text()").get().strip()
+            if plot == description:
+                plot = ""  # if the plot is the same as the description, it's not a plot
 
             # get the div that contains the class .cast-and-crew-item
             actors = response.xpath("//div[contains(@class, 'cast-and-crew-item')]//a/p/text()").getall()
             actors = [a.strip() for a in actors]
 
-            yield Movie(movie_id=movie_id, title=title, description=description, release=release, duration=duration,
-                        genres=genre, score=audience_score, critic_score=critic_score, director=director, actors=actors,
-                        plot=plot, metadata=metadata)
+            yield Movie(movie_id=movie_id, title=title, description=description, release=release_year,
+                        duration=duration, genres=genre, score=audience_score, critic_score=critic_score,
+                        directors=directors, actors=actors, plot=plot, metadata=metadata)
 
     def parse_movie_list(self, response: Response) -> Any:
         response_json = response.json()

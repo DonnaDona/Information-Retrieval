@@ -5,7 +5,7 @@ from urllib.parse import urlparse, parse_qs
 import scrapy
 from scrapy.http import Response, Request
 
-from .utils import parse_duration, datestr_to_iso
+from .utils import parse_duration, try_float
 from ..items import Movie, Review
 
 
@@ -81,21 +81,6 @@ class MetacriticSpider(scrapy.Spider):
         if len(movie_urls) > 0:
             yield self.next_page(response)
 
-    def parse(self, response: Response, **kwargs: Any) -> Any:
-        """
-        Entry point, call the right parser based on the page type.
-
-        This function should be called only the first time; the other `Request`s have the callback set to the right
-        parser function.
-        """
-        page_url = response.url
-        page_type = page_url.split("/")[3]
-
-        if page_type == "movie":
-            yield self.parse_movie(response)
-        elif page_type == "browse":
-            yield from self.parse_browse_page(response)
-
     def parse_metadata(self, response: Response) -> Movie.Metadata:
         url = response.xpath("//link[@rel='canonical']/@href").get()
         image_url = response.xpath("//meta[@property='og:image']/@content").get()
@@ -114,13 +99,10 @@ class MetacriticSpider(scrapy.Spider):
         title = response.css("div.c-productHero_title").xpath("./div/text()").get().strip()
 
         description = response.xpath("//meta[@name='description']/@content").get()
-        plot = description
+        plot = ""  # avoid duplicate plot/description
 
-        # find the div.c-movieDetails_sectionContainer that contains a span with the text "Release Date"
-        # then get the text of the next sibling
-        release_date_str = response.xpath(
-            "//div[contains(@class, 'c-movieDetails_sectionContainer')]//span[contains(text(), 'Release Date')]/following-sibling::span/text()").get()
-        release_date = datestr_to_iso(release_date_str, "%b %d, %Y")
+        release_year_str = response.css("div.c-heroVariant_headerInfo")[0].xpath(".//span/text()").get().strip()
+        release_year = int(release_year_str)
 
         duration_str = response.xpath(
             "//div[contains(@class, 'c-movieDetails_sectionContainer')]//span[contains(text(), 'Duration')]/following-sibling::span/text()").get()
@@ -131,20 +113,35 @@ class MetacriticSpider(scrapy.Spider):
 
         critic_score_str = response.xpath(
             "//div[contains(@class, 'c-siteReviewScore_background-critic_medium')]//span/text()").get()
-        critic_score = float(critic_score_str) / 10 if critic_score_str and critic_score_str.isnumeric() else float(
-            'nan')
+        critic_score = try_float(critic_score_str) / 10
 
         user_score_str = response.xpath(
             "//div[contains(@class, 'c-siteReviewScore_background-user')]//span/text()").get()
-        user_score = float(user_score_str) if user_score_str and user_score_str.isnumeric() else float('nan')
+        user_score = try_float(user_score_str)
 
-        director = response.xpath("//div[contains(@class, 'c-productDetails_staff_directors')]//a/text()").get().strip()
+        directors = response.css("div.c-productDetails_staff_directors")[0].css("a::text").getall()
+        directors = [director.strip() for director in directors]
 
         actors = response.xpath("//div[contains(@data-cy, 'cast-')]//h3/text()")
         actors = list(set(actors.get().strip() for actors in actors))
 
         metadata = self.parse_metadata(response)
 
-        return Movie(movie_id=movie_id, title=title, description=description, release=release_date, duration=duration,
-                     genres=genres, score=user_score, critic_score=critic_score, director=director, actors=actors,
+        return Movie(movie_id=movie_id, title=title, description=description, release=release_year, duration=duration,
+                     genres=genres, score=user_score, critic_score=critic_score, directors=directors, actors=actors,
                      metadata=metadata, plot=plot)
+
+    def parse(self, response: Response, **kwargs: Any) -> Any:
+        """
+        Entry point, call the right parser based on the page type.
+
+        This function should be called only the first time; the other `Request`s have the callback set to the right
+        parser function.
+        """
+        page_url = response.url
+        page_type = page_url.split("/")[3]
+
+        if page_type == "movie":
+            yield self.parse_movie(response)
+        elif page_type == "browse":
+            yield from self.parse_browse_page(response)

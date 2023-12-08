@@ -14,7 +14,6 @@ from .items import Review
 
 
 class PostgresPipeline:
-
     WHITELIST = ["imdb", "metacritic", "rottentomatoes"]
 
     def __setup_connection__(self):
@@ -235,4 +234,20 @@ class MergePipeline:
             return self.process_plot(item)
 
         # No match, just return the item
+        return item
+
+
+class FormatPipeline:
+    """
+    Formats movie objects to be put in the database.
+
+    For example, sorts the list of genres, actors, directors.
+    """
+
+    def process_item(self, item: Movie, spider):
+        if isinstance(item, Movie):
+            item.genres = sorted(item.genres)
+            item.actors = sorted(item.actors)
+            item.directors = sorted(item.directors)
+            return item
         return item

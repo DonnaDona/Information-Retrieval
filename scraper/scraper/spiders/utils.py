@@ -1,13 +1,16 @@
-def datestr_to_iso(datestr, fmt='%B %d, %Y'):
+def try_float(s: str) -> float:
     """
-    Convert date string to ISO format.
+    Try to convert a string to a float, returning NaN if the conversion fails.
 
-    :param datestr: date string in the format "Month day, Year"
-    :return: date string in ISO format
+    :param s: the string
+    :return: the float
     """
-    from datetime import datetime
-    date = datetime.strptime(datestr, fmt)
-    return date.isoformat()
+    if not s:
+        return float('nan')
+    try:
+        return float(s)
+    except:
+        return float('nan')
 
 
 def parse_duration(duration_str: str) -> int:

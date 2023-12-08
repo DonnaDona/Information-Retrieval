@@ -5,7 +5,7 @@ from typing import Generator, Any
 import scrapy
 from scrapy.http import Response
 
-from .utils import parse_duration, datestr_to_iso
+from .utils import parse_duration
 from ..items import Review, Movie, Plot
 
 
@@ -109,7 +109,7 @@ class IMDBSpider(scrapy.Spider):
 
         yield Plot(movie_id=movie_id, text=''.join(plot))
 
-    def parse_movie(self, response: Response, depth: int) -> Generator[Any, None, None]:
+    def parse_movie(self, response: Response, depth: int = 0) -> Generator[Any, None, None]:
         """
         Parse a movie page, yielding a `Movie` for the movie.
 
@@ -130,10 +130,9 @@ class IMDBSpider(scrapy.Spider):
                 title = response.css("h1 ::text").get()
                 description = response.xpath("//meta[@name='description']/@content").get()
 
-                release_date_str = response.xpath("//section[@cel_widget_id='StaticFeature_Details']").css(
-                    "a.ipc-metadata-list-item__list-content-item::text").get()
-                release_date_str = release_date_str.split("(")[0].strip()
-                release_date = datestr_to_iso(release_date_str)
+                # release_year_str is the first a child of the ul adjacent to the h1
+                release_year_str = response.xpath("//h1/following-sibling::ul//a/text()").get()
+                release_year = int(release_year_str)
 
                 duration_str = ''.join(response.xpath("//section[@cel_widget_id='StaticFeature_TechSpecs']").css(
                     "div.ipc-metadata-list-item__content-container::text").getall())
@@ -142,15 +141,16 @@ class IMDBSpider(scrapy.Spider):
                 genres = response.xpath("//div[@data-testid='genres']").css("a.ipc-chip span::text").getall()
                 score = float(response.css("span.cMEQkK::text").get() or float('nan'))
 
-                director = response.css("ul.title-pc-list").css("a::text").get()
+                # get all the a text of the first li of the first ul with class ipc-metadata-list 
+                directors = response.css("ul.ipc-metadata-list")[0].css("li")[0].css("a::text").getall()
                 actors = response.css("a.gCQkeh::text").getall()
 
                 metadata = self.parse_metadata(response)
 
                 logging.info(f"Movie {movie_id} parsed (depth {depth})")
 
-                yield Movie(movie_id=movie_id, title=title, description=description, release=release_date,
-                            duration=duration, genres=genres, score=score, critic_score=score, director=director,
+                yield Movie(movie_id=movie_id, title=title, description=description, release=release_year,
+                            duration=duration, genres=genres, score=score, critic_score=score, directors=directors,
                             actors=actors, metadata=metadata, wait_for_plot=True)
 
                 yield response.follow(f"{self._DOMAIN}/title/tt{movie_id}/plotsummary/", callback=self.parse_plot,
@@ -198,3 +198,5 @@ class IMDBSpider(scrapy.Spider):
     def parse(self, response: Response, **kwargs: Any) -> Any:
         if response.url == self.start_urls[0]:
             yield from self.parse_movie_list(response)
+        else:
+            yield from self.parse_movie(response, depth=0)

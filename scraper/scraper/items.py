@@ -4,9 +4,9 @@
 # https://docs.scrapy.org/en/latest/topics/items.html
 
 from dataclasses import dataclass
+from typing import List
 
 import scrapy
-from typing import List
 
 
 @dataclass
@@ -31,19 +31,19 @@ class Movie:
 
     title: str
     description: str
-    release: str  # use datestr_to_iso
+    release: int  # just the year, no need for date operations
     duration: int
-    genres: List[str]
+    genres: List[str]  # sorted list of genres
     score: float
     critic_score: float
 
-    director: str
-    actors: List[str]
+    directors: List[str]  # sorted list of directors
+    actors: List[str]  # sorted list of actors
 
     metadata: Metadata
 
     plot: str = ""  # set by pipeline (MergePipeline)
-    wait_for_plot: bool = False # checked by pipeline (MergePipeline)
+    wait_for_plot: bool = False  # checked by pipeline (MergePipeline)
 
 
 @dataclass

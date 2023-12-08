@@ -7,8 +7,9 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
-from dotenv import load_dotenv
 import os
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -67,7 +68,7 @@ COOKIES_ENABLED = False
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 
-ITEM_PIPELINES = {"scraper.pipelines.MergePipeline": 100, }
+ITEM_PIPELINES = {"scraper.pipelines.MergePipeline": 100, "scraper.pipelines.FormatPipeline": 150, }
 
 USE_POSTGRESQL = os.getenv("USE_POSTGRES", "false").lower() != "false"
 
