@@ -30,7 +30,7 @@ class PostgresPipeline:
         self.cur = self.connection.cursor()
 
     def __init__(self):
-        load_dotenv()
+        load_dotenv("../.env")
 
         self.connection = None
         self.cur = None
