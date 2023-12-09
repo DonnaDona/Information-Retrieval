@@ -1,13 +1,18 @@
 import React from 'react'
 import {Button} from "@mui/material";
+import {useDispatch, useSelector} from "react-redux";
+import {selectQuery, setShowResults} from "../features/searchSlice.jsx";
 
 export function SearchButton() {
+    const dispatch = useDispatch();
+    const query = useSelector(selectQuery);
+
     const handleClick = () => {
-        console.log("Search button clicked");
+        dispatch(setShowResults(true));
     }
 
     return (
-        <Button variant="contained" onClick={handleClick} sx={{width: 800, borderRadius: '20px'}}>
+        <Button variant="contained" onClick={handleClick} disabled={!query} sx={{width: '100%', borderRadius: '10px'}}>
             Search
         </Button>
     )

@@ -19,7 +19,7 @@ export function TextInput() {
             sx={{width: '100%'}}
 
             InputProps={{
-                sx: {borderRadius: 4, paddingY: 0.25},
+                sx: {borderRadius: 4, paddingY: 0.25, bgcolor: 'white'},
                 startAdornment: (
                     <InputAdornment position="start">
                         <SearchIcon/>

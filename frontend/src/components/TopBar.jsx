@@ -1,15 +1,20 @@
 import React from 'react'
-import {AppBar, Box, Toolbar, Typography} from "@mui/material";
+import {AppBar, Box, Toolbar} from "@mui/material";
+import {TextInput} from "./TextInput.jsx";
+import {SearchButton} from "./SearchButton.jsx";
 
 export function TopBar() {
 
     return (
         <Box sx={{flexGrow: 1}}>
-            <AppBar position="static">
+            <AppBar elevation position="static" sx={{bgcolor: "#eceff1", padding: 0.5}}>
                 <Toolbar>
-                    <Typography variant="h6" component="div" sx={{flexGrow: 1, paddingLeft: 8}}>
-                        Search & Chill
-                    </Typography>
+                    <Box paddingLeft={4}>
+                        <TextInput/>
+                    </Box>
+                    <Box paddingX={1}>
+                        <SearchButton/>
+                    </Box>
                 </Toolbar>
             </AppBar>
         </Box>
