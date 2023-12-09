@@ -5,8 +5,8 @@
 #   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
-from django.db import models
 from django.contrib.postgres.fields import ArrayField
+from django.db import models
 
 
 class Movie(models.Model):
@@ -27,7 +27,7 @@ class Movie(models.Model):
 
 
 class DataSource(models.Model):
-    movie = models.ForeignKey(Movie, models.DO_NOTHING)
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='data_sources')
     movie_source_uid = models.CharField(max_length=255, blank=True, null=True)
     name = models.CharField(max_length=255)
     url = models.TextField(unique=True)

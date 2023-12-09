@@ -33,22 +33,28 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 # Application definition
 
-INSTALLED_APPS = ["django.contrib.sessions", "django.contrib.staticfiles", "core", ]
+INSTALLED_APPS = ["django.contrib.sessions", "django.contrib.staticfiles", "django.contrib.contenttypes",
+                  "django.contrib.auth", "rest_framework", "core.apps.CoreConfig", "api.apps.ApiConfig",
+                  "retrieval.apps.RetrievalConfig", ]
 
 MIDDLEWARE = ["django.middleware.security.SecurityMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",
               "django.middleware.common.CommonMiddleware", ]
 
 ROOT_URLCONF = "backend.urls"
 
-TEMPLATES = []
+if DEBUG:
+    TEMPLATES = [{"BACKEND": "django.template.backends.django.DjangoTemplates", "APP_DIRS": True,
+                  "OPTIONS": {"debug": DEBUG}, }, ]
+else:
+    TEMPLATES = []
 
 WSGI_APPLICATION = "backend.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 DATABASES = {"default": {"ENGINE": "django.db.backends.postgresql_psycopg2", "HOST": os.getenv("DB_HOST"),
-                         "PORT": os.getenv("DB_PORT"), "NAME": os.getenv("DB_NAME"),
-                         "USER": os.getenv("DB_USER"), "PASSWORD": os.getenv("DB_PASSWORD"), }}
+                         "PORT": os.getenv("DB_PORT"), "NAME": os.getenv("DB_NAME"), "USER": os.getenv("DB_USER"),
+                         "PASSWORD": os.getenv("DB_PASSWORD"), }}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -75,3 +81,5 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+REST_FRAMEWORK = {"DEFAULT_AUTHENTICATION_CLASSES": [], "DEFAULT_PERMISSION_CLASSES": [], }
