@@ -1,18 +1,19 @@
 import React from 'react'
 import {Button} from "@mui/material";
 import {useDispatch, useSelector} from "react-redux";
-import {selectQuery, setShowResults} from "../features/searchSlice.jsx";
+import {selectQuery} from "../features/searchSlice.jsx";
+import {useNavigate} from "react-router-dom";
 
 export function SearchButton() {
-    const dispatch = useDispatch();
     const query = useSelector(selectQuery);
+    const navigate = useNavigate();
 
-    const handleClick = () => {
-        dispatch(setShowResults(true));
+    const viewResults = () => {
+        navigate(`/results?q=${encodeURIComponent(query)}`);
     }
 
     return (
-        <Button href='/results' variant="contained" onClick={handleClick} disabled={!query} sx={{width: '100%', borderRadius: '10px'}}>
+        <Button onClick={viewResults} variant="contained" disabled={!query} sx={{width: '100%', borderRadius: '10px'}}>
             Search
         </Button>
     )

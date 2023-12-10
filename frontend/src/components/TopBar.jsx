@@ -7,7 +7,7 @@ export function TopBar() {
 
     return (
         <Box sx={{flexGrow: 1}}>
-            <AppBar elevation position="static" sx={{bgcolor: "#eceff1", padding: 0.5}}>
+            <AppBar elevation={0} position="static" sx={{bgcolor: "#eceff1", padding: 0.5}}>
                 <Toolbar>
                     <Box paddingLeft={4}>
                         <TextInput/>
