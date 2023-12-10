@@ -12,6 +12,10 @@ import ErrorPage from "./features/ErrorPage.jsx";
 import {SearchPage} from "./features/SearchPage.jsx";
 import {MovieResults} from "./features/MovieResults.jsx";
 
+import axios from "axios";
+
+axios.defaults.baseURL = 'http://localhost:8000/api';
+
 const router = createBrowserRouter([
     {
         path: "/",

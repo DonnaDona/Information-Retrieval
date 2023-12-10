@@ -5,61 +5,38 @@ import {MovieCard} from "../components/MovieCard.jsx";
 import {useSearchParams} from "react-router-dom";
 import {useDispatch} from "react-redux";
 import {setQuery} from "./searchSlice.jsx";
+import axios from "axios";
 
 export function MovieResults() {
 
     const [searchParams] = useSearchParams();
     const dispatch = useDispatch();
+    const [movieData, setMovieData] = React.useState([]);
     dispatch(setQuery(searchParams.get("q", "")));
 
 
-    const movieData = [
+    axios.get(`/search?q=${searchParams.get("q", "")}`)
+        .then((response) => {
+            setMovieData(response.data);
+        })
+        .catch((error) => {
+            console.error(error);
+        });
+
+    const formatMovieUrls = (movie) => [
+        {name: "IMDB", url: movie.urls?.imdb, image: "../../public/imdb.png"},
+        {name: "Metacritic", url: movie.urls?.metacritic, image: "../../public/metacritic.png"},
         {
-            title: "The Matrix",
-            release: "1999",
-            description: "A computer hacker learns from mysterious rebels about the true nature of his reality and his role in the war against its controllers.",
-            image: "https://upload.wikimedia.org/wikipedia/en/c/c1/The_Matrix_Poster.jpg",
-            rating: "8.7",
-            duration: "2h 16m"
-        },
-        {
-            title: "The Matrix Reloaded",
-            release: "2003",
-            description: "Freedom fighters Neo, Trinity and Morpheus continue to lead the revolt against the Machine Army, unleashing their arsenal of extraordinary skills and weaponry against the systematic forces of repression and exploitation.",
-            image: "https://upload.wikimedia.org/wikipedia/en/b/ba/Poster_-_The_Matrix_Reloaded.jpg",
-            rating: "7.2",
-            duration: "2h 18m"
-        },
-        {
-            title: "The Matrix Revolutions",
-            release: "2003",
-            description: "The human city of Zion defends itself against the massive invasion of the machines as Neo fights to end the war at another front while also opposing the rogue Agent Smith.",
-            image: "https://upload.wikimedia.org/wikipedia/en/3/34/Matrix_revolutions_ver7.jpg",
-            rating: "6.7",
-            duration: "2h 9m"
-        },
-        {
-            title: "The Matrix Resurrections",
-            release: "2021",
-            description: "The Matrix Resurrections is an upcoming American science fiction action film produced, co-written, and directed by Lana Wachowski. It is the fourth installment in The Matrix film series, and a sequel to The Matrix Revolutions (2003).",
-            image: "",
-            rating: "N/A",
-            duration: "N/A"
-        },
-        {
-            title: "The Matrix",
-            release: "1999",
-            description: "A computer hacker learns from mysterious rebels about the true nature of his reality and his role in the war against its controllers.",
-            image: "https://upload.wikimedia.org/wikipedia/en/c/c1/The_Matrix_Poster.jpg",
-            rating: "8.7",
-            duration: "2h 16m"
-        },
-    ]
+            name: "Rotten Tomatoes",
+            url: movie.urls?.rotten_tomatoes,
+            image: "../../public/tomato.png"
+        }
+    ];
 
     return (
         <Stack>
             <TopBar/>
-            <Stack flexWrap="wrap" flexDirection="row" justifyContent="center" paddingTop={10}>
+            <Stack flexWrap="wrap" flexDirection="row" justifyContent="flex-start" paddingTop={10} paddingLeft={3}>
                 {movieData.map((movie, index) => (
                     <MovieCard
                         key={index}
@@ -68,7 +45,9 @@ export function MovieResults() {
                         description={movie.description.split(" ").slice(0, 10).join(" ") + "..."}
                         image={movie.image || "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/600px-No_image_available.svg.png"}
                         rating={movie.rating}
-                        duration={movie.duration}
+                        duration={movie.duration !== null ? movie.duration : ""}
+                        genres={movie.genres}
+                        urls={formatMovieUrls(movie)}
                     />
                 ))}
             </Stack>
