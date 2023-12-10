@@ -31,12 +31,16 @@ DEBUG = os.getenv("DJANGO_DEBUG").lower() == "true"
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
+CORS_ORIGIN_ALLOW_ALL = True
+
 # Application definition
 
-INSTALLED_APPS = ["django.contrib.sessions", "django.contrib.staticfiles", "django.contrib.contenttypes",
+INSTALLED_APPS = ["django.contrib.sessions", "django.contrib.staticfiles", "django.contrib.contenttypes", "corsheaders",
                   "django.contrib.auth", "rest_framework", "core.apps.CoreConfig", "api.apps.ApiConfig", ]
 
-MIDDLEWARE = ["django.middleware.security.SecurityMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",
+MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",
               "django.middleware.common.CommonMiddleware", ]
 
 ROOT_URLCONF = "backend.urls"
@@ -82,5 +86,4 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {"DEFAULT_AUTHENTICATION_CLASSES": [], "DEFAULT_PERMISSION_CLASSES": [],
-                  'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-                  'PAGE_SIZE': 20}
+                  'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination', 'PAGE_SIZE': 20}
