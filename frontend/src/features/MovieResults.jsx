@@ -2,8 +2,20 @@ import React from 'react'
 import {Box, Stack} from "@mui/material";
 import {TopBar} from "../components/TopBar.jsx";
 import {MovieCard} from "../components/MovieCard.jsx";
+import {useSearchParams} from "react-router-dom";
+import {useSelector} from "react-redux";
+import {selectShowResults} from "./searchSlice.jsx";
 
 export function MovieResults() {
+
+    let [searchParams, setSearchParams] = useSearchParams();
+    const showResults = useSelector(selectShowResults);
+
+    if (showResults) {
+        let params = new URLSearchParams();
+        params.append("query", "jfkddddddddddddddddddddddddddddddddd");
+        setSearchParams(params);
+    }
 
     const movieData = [
         {title: "The Matrix", release: "1999", description: "A computer hacker learns from mysterious rebels about the true nature of his reality and his role in the war against its controllers.", image: "https://upload.wikimedia.org/wikipedia/en/c/c1/The_Matrix_Poster.jpg", rating: "8.7", duration: "2h 16m"},

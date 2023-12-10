@@ -12,7 +12,7 @@ export function SearchButton() {
     }
 
     return (
-        <Button variant="contained" onClick={handleClick} disabled={!query} sx={{width: '100%', borderRadius: '10px'}}>
+        <Button href='/results' variant="contained" onClick={handleClick} disabled={!query} sx={{width: '100%', borderRadius: '10px'}}>
             Search
         </Button>
     )
