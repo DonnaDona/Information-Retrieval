@@ -6,11 +6,11 @@ from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 
 from django.http import HttpResponse
+from django.conf import settings
 
 from .serializers import MovieSerializer, DataSourceSerializer
 
 from .services import perform_search
-
 
 
 # create a viewset for the Movie model
@@ -20,16 +20,21 @@ from .services import perform_search
 class MovieViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
-    
+
     def get_queryset(self):
         request = self.request
         # retrieve the 'q' query parameter
         q = request.query_params.get('q', None)
+
         # if the parameter is not provided, return an error
         if q is None:
             return Response({"error": "missing query parameter 'q'"})
+        
+        page_size = settings.REST_FRAMEWORK['PAGE_SIZE']
+        page = request.query_params.get('page', 1)
+        end = page * page_size
 
-        docnos = perform_search(q)
+        docnos = perform_search(q, end)
         queryset = Movie.retrieve_sorted(docnos)
         return queryset
 
