@@ -10,12 +10,13 @@ import scrapy
 
 
 @dataclass
-class Review(scrapy.Item):
+class Review:
     movie_id: str
-    url: str
-    score: float
+    id: str  # the id of the review (unique in the `source_name` website)
     title: str
-    text: str
+    score: float
+    content: str
+    source_name: str
 
 
 @dataclass
