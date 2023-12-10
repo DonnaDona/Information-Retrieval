@@ -6,7 +6,7 @@ import scrapy
 from scrapy.http import Response
 
 from .utils import parse_duration
-from ..items import Review, Movie, Plot
+from ..items import Review, Movie, Plot, Reviews
 
 
 class IMDBSpider(scrapy.Spider):
@@ -66,7 +66,7 @@ class IMDBSpider(scrapy.Spider):
             url = f"{url}&paginationKey={datakey}"
         return url
 
-    def extract_reviews(self, response: Response, extracted: int = 0) -> Generator[Review, None, None]:
+    def extract_reviews(self, response: Response, extracted: int = 0) -> Generator[Reviews, None, None]:
         """
         Extract the reviews from a movie page.
 
@@ -75,6 +75,7 @@ class IMDBSpider(scrapy.Spider):
         :return: a generator of reviews for the movie
         """
         reviews = response.css("div.lister-item")
+        reviews_list = []
         for review in reviews:
             review_id = review.xpath("./@data-review-id").get()
             score = review.xpath(
@@ -83,10 +84,13 @@ class IMDBSpider(scrapy.Spider):
             text = '\n'.join(review.xpath(".//div[@class='text show-more__control']/text()").getall())
             if score and text:
                 extracted += 1
-                yield Review(movie_id=self.get_movie_id(response.url), score=float(score), title=title, content=text,
-                             source_name="IMDb", id=review_id)
+                reviews_list.append(
+                    Review(movie_id=self.get_movie_id(response.url), score=float(score), title=title, content=text,
+                           source_name="IMDb", id=review_id))
                 if extracted >= self.REVIEWS_LIMIT:
-                    return
+                    break
+        if len(reviews_list) > 0:
+            yield Reviews(reviews=reviews_list)
         next_datakey = response.xpath("//div[@class='load-more-data']/@data-key")
 
         current_movie_id = self.get_movie_id(response.url)

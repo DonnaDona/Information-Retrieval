@@ -6,8 +6,6 @@
 from dataclasses import dataclass
 from typing import List
 
-import scrapy
-
 
 @dataclass
 class Review:
@@ -17,6 +15,18 @@ class Review:
     score: float
     content: str
     source_name: str
+
+
+@dataclass
+class Reviews:
+    """
+    A list of reviews for a movie.
+
+    This object, containing a list of Review objects is yield in the spiders, instead of individual Review objects.
+    This way, `PostgresPipeline` can insert multiple reviews with a single transaction, instead of one by one, which
+    is much faster.
+    """
+    reviews: List[Review]
 
 
 @dataclass

@@ -2,7 +2,6 @@
 #
 # Order of the pipelines:
 # MergePipeline -> FormatPipeline -> PostgresPipeline
-import os
 
 import psycopg2
 from dotenv import load_dotenv
@@ -10,7 +9,7 @@ from scrapy import Spider
 from scrapy.exceptions import DropItem
 
 from .items import Movie, Plot
-from .items import Review
+from .items import Reviews
 from .utils import setup_postgres_connection
 
 
@@ -64,10 +63,10 @@ class PostgresPipeline:
             )
             """)
 
-    def process_review(self, item: Review):
+    def process_reviews(self, items: Reviews):
         # retrieve the id in the database of the movie based on data_sources
         self.cur.execute("""SELECT movie_id FROM data_sources WHERE movie_source_uid = %s AND name = %s""",
-                         (item.movie_id, item.source_name))
+                         (items.reviews[0].movie_id, items.reviews[0].source_name))
         movie_id = self.cur.fetchone()
 
         if movie_id is None:
@@ -75,10 +74,11 @@ class PostgresPipeline:
 
         movie_id = movie_id[0]
 
-        # insert the review
-        self.cur.execute("""
-            INSERT INTO reviews (id, movie_id, title, content, score) VALUES (%s, %s, %s, %s, %s)
-        """, (item.id, movie_id, item.title, item.content, item.score))
+        # insert the reviews
+        for item in items.reviews:
+            self.cur.execute("""
+                INSERT INTO reviews (id, movie_id, title, content, score) VALUES (%s, %s, %s, %s, %s)
+            """, (item.id, movie_id, item.title, item.content, item.score))
 
     def process_movie(self, item: Movie):
         """
@@ -108,9 +108,8 @@ class PostgresPipeline:
             self.cur.execute("""
                 INSERT INTO data_sources (movie_id, movie_source_uid, name, url, page_title, score, critic_score) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (
-            movie_id, item.movie_id, item.metadata.source_name, item.metadata.url, item.metadata.page_title, item.score,
-            item.critic_score))
+            """, (movie_id, item.movie_id, item.metadata.source_name, item.metadata.url, item.metadata.page_title,
+                  item.score, item.critic_score))
 
             return
 
@@ -136,9 +135,8 @@ class PostgresPipeline:
                 plot = COALESCE(plot, %s),
                 image_url = COALESCE(image_url, %s)
             WHERE id = %s
-        """, (
-        item.description, item.duration, item.genres, item.directors, item.actors, item.plot, item.metadata.image_url,
-        movie_id))
+        """, (item.description, item.duration, item.genres, item.directors, item.actors, item.plot,
+              item.metadata.image_url, movie_id))
 
         self.cur.execute("""
             SELECT id FROM data_sources WHERE movie_id = %s AND name = %s
@@ -149,9 +147,8 @@ class PostgresPipeline:
             self.cur.execute("""
                 INSERT INTO data_sources (movie_id, movie_source_uid, name, url, page_title, score, critic_score) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (
-            movie_id, item.movie_id, item.metadata.source_name, item.metadata.url, item.metadata.page_title, item.score,
-            item.critic_score))
+            """, (movie_id, item.movie_id, item.metadata.source_name, item.metadata.url, item.metadata.page_title,
+                  item.score, item.critic_score))
         else:
             self.cur.execute("""
                 UPDATE data_sources SET last_crawled = NOW() WHERE id = %s
@@ -165,7 +162,7 @@ class PostgresPipeline:
             if isinstance(item, Movie):
                 self.process_movie(item)
             else:
-                self.process_review(item)
+                self.process_reviews(item)
         except psycopg2.InterfaceError as e:
             print("Connection to database lost: ", e)
 
