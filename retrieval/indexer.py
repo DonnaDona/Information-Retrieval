@@ -1,17 +1,18 @@
+# indexer.py
 import pyterrier as pt
 import pandas as pd
 
 
-def create_index(index_path, crawled_data):
+def create_index(index_path, crawled_data, fields=None, meta=None):
     df = pd.DataFrame(crawled_data)
 
-    indexing_pipeline = pt.IterDictIndexer(index_path, meta={"image_url": 255, "docno": 20}, overwrite=True)
-    # rename the column id to docno
-    df = df.rename(columns={"id": "docno"})
-    # serialize all the "date" values to a string in the form "day Month year"
-    df["release"] = pd.to_datetime(df["release"]).dt.strftime("%d %B %Y")
-    print("Started indexing...")
+    if fields is None:
+        fields = df.columns.tolist()
 
-    indexing_pipeline.index(df.to_dict(orient="records"), fields=df.head())
+    indexing_pipeline = pt.IterDictIndexer(index_path, meta=meta, overwrite=True)
+    df = df.rename(columns={"id": "docno"})
+    df["release"] = pd.to_datetime(df["release"]).dt.strftime("%d %B %Y")
+
+    print("Started indexing...")
+    indexing_pipeline.index(df.to_dict(orient="records"), fields=fields)
     print("Finished indexing...")
-    #indexing_pipeline.run()

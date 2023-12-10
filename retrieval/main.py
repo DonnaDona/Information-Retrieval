@@ -5,19 +5,23 @@ del os.environ['JAVA_HOME']
 dotenv.load_dotenv()
 print(os.environ['JAVA_HOME'])
 
-from src import loader, indexer, retriever
 import pyterrier as pt
+from config import load_environment_variables
+from retrieval import retriever, loader, indexer
+
 
 def main():
+    load_environment_variables()
     pt.init()
-    # # Loading crawled data from the database
-    # crawled_data = loader.load_crawled_data()
+
+    # Loading crawled data from the database
+    crawled_data = loader.load_crawled_data()
     index_path = "./data/index"
-    #
-    # # Creating an index
-    # indexer.create_index(index_path, crawled_data)
-    #
-    # # Performing a query about a movie
+
+    # Creating an index
+    indexer.create_index(index_path, crawled_data, fields=['image_url', 'id'], meta={"image_url": 255, "docno": 20})
+
+    # Performing a query about a movie
     index = retriever.initialize_terrier(index_path)
     print(index.getCollectionStatistics())
 
