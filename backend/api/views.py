@@ -7,9 +7,10 @@ from rest_framework.response import Response
 
 from django.http import HttpResponse
 
-from api.serializers import MovieSerializer, DataSourceSerializer
+from .serializers import MovieSerializer, DataSourceSerializer
 
-from retrieval.services import perform_search
+from .services import perform_search
+
 
 
 # create a viewset for the Movie model
@@ -19,20 +20,18 @@ from retrieval.services import perform_search
 class MovieViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
-
-    def list(self, request, **kwargs):
+    
+    def get_queryset(self):
+        request = self.request
         # retrieve the 'q' query parameter
         q = request.query_params.get('q', None)
         # if the parameter is not provided, return an error
         if q is None:
             return Response({"error": "missing query parameter 'q'"})
-        
+
         docnos = perform_search(q)
-
-        queryset = self.get_queryset().filter(id__in=docnos)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        queryset = Movie.retrieve_sorted(docnos)
+        return queryset
 
 
 def test(request):

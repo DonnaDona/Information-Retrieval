@@ -2,7 +2,7 @@
 from typing import Generator
 
 import pandas as pd
-import loader
+from . import loader
 import pyterrier as pt
 
 

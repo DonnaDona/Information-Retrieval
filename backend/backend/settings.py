@@ -34,8 +34,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 # Application definition
 
 INSTALLED_APPS = ["django.contrib.sessions", "django.contrib.staticfiles", "django.contrib.contenttypes",
-                  "django.contrib.auth", "rest_framework", "core.apps.CoreConfig", "api.apps.ApiConfig",
-                  "retrieval.apps.RetrievalConfig", ]
+                  "django.contrib.auth", "rest_framework", "core.apps.CoreConfig", "api.apps.ApiConfig", ]
 
 MIDDLEWARE = ["django.middleware.security.SecurityMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",
               "django.middleware.common.CommonMiddleware", ]
@@ -82,4 +81,6 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-REST_FRAMEWORK = {"DEFAULT_AUTHENTICATION_CLASSES": [], "DEFAULT_PERMISSION_CLASSES": [], }
+REST_FRAMEWORK = {"DEFAULT_AUTHENTICATION_CLASSES": [], "DEFAULT_PERMISSION_CLASSES": [],
+                  'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+                  'PAGE_SIZE': 20}

@@ -1,14 +1,13 @@
 import math
 
-from rest_framework import serializers
-
 from core.models import Movie, DataSource
+from rest_framework import serializers
 
 
 class DataSourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = DataSource
-        fields = ['url', 'page_title', 'score', 'critic_score']
+        fields = ['name', 'url', 'page_title', 'score', 'critic_score']
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
@@ -24,5 +23,17 @@ class MovieSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Movie
-        fields = ['id', 'title', 'description', 'release', 'duration', 'genres', 'directors', 'actors', 'plot',
-                  'image_url', 'data_sources']
+        fields = ['id', 'title', 'description', 'release', 'duration', 'genres', 'image_url', 'data_sources']
+
+    def to_representation(self, instance):
+        if instance.duration == -1:
+            instance.duration = None
+
+        ret = super().to_representation(instance)
+
+        # transform the data_sources from a list to a dictionary
+        data_sources = ret.pop('data_sources')
+        ret['data_sources'] = {}
+        for data_source in data_sources:
+            ret['data_sources'][data_source.pop('name').lower()] = data_source
+        return ret

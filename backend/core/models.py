@@ -25,6 +25,11 @@ class Movie(models.Model):
         db_table = 'movies'
         unique_together = (('title', 'directors', 'release'),)
 
+    @staticmethod
+    def retrieve_sorted(ids):
+        preserved = [models.Case(*[models.When(pk=pk, then=pos)]) for pos, pk in enumerate(ids)]
+        return Movie.objects.filter(pk__in=ids).order_by(*preserved)
+
 
 class DataSource(models.Model):
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='data_sources')
