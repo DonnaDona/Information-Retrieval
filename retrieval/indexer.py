@@ -1,18 +1,44 @@
 # indexer.py
-import pyterrier as pt
+from typing import Generator
+
 import pandas as pd
+import loader
+import pyterrier as pt
 
 
-def create_index(index_path, crawled_data, fields=None, meta=None):
-    df = pd.DataFrame(crawled_data)
+class CustomIndexer:
+    def __init__(self, index_path, meta=None):
+        self._index = pt.IterDictIndexer(index_path, meta=meta, overwrite=True, blocks=True)
+        self.fields = None
 
-    if fields is None:
-        fields = df.columns.tolist()
+    def index(self, df: pd.DataFrame):
+        df = df.rename(columns={"id": "docno"})
+        if self.fields is None:
+            self.fields = df.columns.tolist()
 
-    indexing_pipeline = pt.IterDictIndexer(index_path, meta=meta, overwrite=True)
-    df = df.rename(columns={"id": "docno"})
-    df["release"] = pd.to_datetime(df["release"]).dt.strftime("%d %B %Y")
+        self._index.index(df.to_dict(orient="records"), fields=self.fields)
+        print(f"Indexed {len(df)} documents")
 
-    print("Started indexing...")
-    indexing_pipeline.index(df.to_dict(orient="records"), fields=fields)
-    print("Finished indexing...")
+
+def create_index(index_path, df: pd.DataFrame, meta=None):
+    import time
+
+    indexing_pipeline = CustomIndexer(index_path, meta=meta)
+
+    start_time = time.time()
+    indexing_pipeline.index(df.to_dict(orient="records"))
+    end_time = time.time()
+
+    print(f"Indexed {len(df)} documents in {end_time - start_time} seconds")
+
+
+def create_index_serverside(index_path, meta=None):
+    import time
+
+    index = CustomIndexer(index_path, meta=meta)
+
+    start_time = time.time()
+    loader.load_crawled_data_iter(index.index)
+    end_time = time.time()
+
+    print(f"Indexed documents in {end_time - start_time} seconds")
