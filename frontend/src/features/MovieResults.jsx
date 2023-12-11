@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {Alert, CircularProgress, Snackbar, Stack} from "@mui/material";
+import {Alert, CircularProgress, Snackbar, Stack, Typography} from "@mui/material";
 import {TopBar} from "../components/TopBar.jsx";
 import {MovieCard} from "../components/MovieCard.jsx";
 import {useSearchParams} from "react-router-dom";
@@ -106,21 +106,26 @@ export function MovieResults() {
         <Stack>
             <TopBar/>
             <Stack justifyContent="center">
-                <Stack flexWrap="wrap" flexDirection="row" justifyContent="start" marginTop={4} paddingLeft={3}>
-                    {items.map((movie, index) => (
-                        <MovieCard
-                            key={index}
-                            title={movie.title}
-                            release={movie.release}
-                            description={movie.description}
-                            image={movie.image_url || "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/600px-No_image_available.svg.png"}
-                            rating={formatMovieRating(movie)}
-                            duration={movie.duration !== null ? movie.duration : ""}
-                            genres={movie.genres}
-                            urls={formatMovieUrls(movie)}
-                        />
-                    ))}
-                </Stack>
+                {items.length > 0 &&
+                    <Stack flexWrap="wrap" flexDirection="row" justifyContent="start" marginTop={4} paddingLeft={3}>
+                        {items.map((movie, index) => (
+                            <MovieCard
+                                key={index}
+                                title={movie.title}
+                                release={movie.release}
+                                description={movie.description}
+                                image={movie.image_url || "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/600px-No_image_available.svg.png"}
+                                rating={formatMovieRating(movie)}
+                                duration={movie.duration !== null ? movie.duration : ""}
+                                genres={movie.genres}
+                                urls={formatMovieUrls(movie)}
+                            />
+                        ))}
+                    </Stack>}
+                {items.length === 0 && !isLoading && <Stack justifyContent="center" alignItems="center" marginTop={24}>
+                    <img src="../../public/no-results.png" alt="logo" width="300" height="310"/>
+                    <Typography component="h2" variant="span" marginTop={4}>No results found</Typography>
+                </Stack>}
             </Stack>
             {(nextUrl !== null && error === null) &&
                 <Stack alignItems="center" marginX={46} marginY={16}><CircularProgress thickness={4}
