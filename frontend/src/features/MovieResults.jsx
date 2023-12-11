@@ -73,7 +73,6 @@ export function MovieResults() {
                 urls.push({name: upper_names[name], url: movie.data_sources[name].url, image: images[name]});
             }
         }
-        console.log(urls);
         return urls;
     }
 

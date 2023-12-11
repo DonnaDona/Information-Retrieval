@@ -1,15 +1,13 @@
 import React from 'react'
 import {Button} from "@mui/material";
-import {useDispatch, useSelector} from "react-redux";
+import {useSelector} from "react-redux";
 import {selectQuery} from "../features/searchSlice.jsx";
-import {useNavigate} from "react-router-dom";
 
 export function SearchButton() {
     const query = useSelector(selectQuery);
-    const navigate = useNavigate();
 
     const viewResults = () => {
-        navigate(`/results?q=${encodeURIComponent(query)}`);
+        window.location.href = `/results?q=${encodeURIComponent(query)}`;
     }
 
     return (
