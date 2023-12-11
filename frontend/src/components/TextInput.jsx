@@ -8,6 +8,13 @@ export function TextInput() {
     const dispatch = useDispatch();
     const query = useSelector(selectQuery);
 
+    const handleChange = (event) => {
+        if (event.key === 'Enter') {
+            console.log('enter pressed');
+            window.location.href = `/results?q=${encodeURIComponent(query)}`;
+        }
+    }
+
     return (
         <TextField
             placeholder="Search..."
@@ -15,7 +22,8 @@ export function TextInput() {
             variant="outlined"
             size="small"
             value={query}
-            onChange={(e) => dispatch(setQuery(e.target.value))}
+            onChange={(event) => dispatch(setQuery(event.target.value))}
+            onKeyDown={handleChange}
             sx={{width: '100%'}}
 
             InputProps={{
