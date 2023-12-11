@@ -1,13 +1,29 @@
 import React from 'react';
-import {Avatar, Box, Card, CardMedia, Chip, Rating, Stack, Typography} from "@mui/material";
+import {Avatar, Box, Card, CardMedia, Chip, Rating, Stack, Typography, useMediaQuery, useTheme} from "@mui/material";
 
 export function MovieCard({title, release, description, image, rating, duration, genres, urls}) {
     const roundness = 4;
     const [hover, setHover] = React.useState(false);
+    const theme = useTheme();
+    const mobile = useMediaQuery(theme.breakpoints.down('md'));
+
+    const formatDuration = (duration) => {
+        const hours = Math.floor(duration / 60);
+        const minutes = duration % 60;
+        if (hours === 0) {
+            return `${minutes}m`;
+        } else if (minutes === 0) {
+            return `${hours}h`;
+        }
+        return `${hours}h ${minutes}m`;
+    }
+
+
     return (
         <Card
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
+            onClick={() => setHover(!hover)}
             sx={{
                 width: 300,
                 height: 500,
@@ -23,6 +39,7 @@ export function MovieCard({title, release, description, image, rating, duration,
 
             <Stack sx={{height: '100%'}}>
                 <CardMedia
+                    loading="lazy"
                     component="img"
                     sx={{
                         width: '100%',
@@ -53,11 +70,16 @@ export function MovieCard({title, release, description, image, rating, duration,
                         <Typography variant="body2" component="span"
                                     sx={{marginBottom: 0.8, fontSize: 14, marginLeft: 0.2, marginRight: 1}}> {release}
                         </Typography>
-                        <Typography variant="body2" sx={{marginBottom: 0.8, fontSize: 14}}>|</Typography>
+                        {duration && release &&
+                            <Typography variant="body2" sx={{marginBottom: 0.8, fontSize: 14}}>|</Typography>}
                         <Typography variant="body2" component="span"
-                                    sx={{marginBottom: 0.8, fontSize: 14, marginX: 1}}> {duration}
+                                    sx={{
+                                        marginBottom: 0.8,
+                                        fontSize: 14,
+                                        marginX: 1
+                                    }}> {duration && formatDuration(duration)}
                         </Typography>
-                        <Typography variant="body2" sx={{marginBottom: 0.8, fontSize: 14}}>|</Typography>
+                        {rating && <Typography variant="body2" sx={{marginBottom: 0.8, fontSize: 14}}>|</Typography>}
                         <Rating name="read-only"
                                 value={rating / 2}
                                 precision={0.5}
@@ -74,7 +96,7 @@ export function MovieCard({title, release, description, image, rating, duration,
                     </Stack>
                     <Typography variant="body2" component="div" sx={{
                         marginBottom: 1,
-                        fontSize: 12,
+                        fontSize: 14,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         display: '-webkit-box',
@@ -84,17 +106,18 @@ export function MovieCard({title, release, description, image, rating, duration,
                         {description}
                     </Typography>
 
-                    {hover &&
+                    {(hover || mobile) &&
                         <Stack>
                             <Typography variant="body2" component="div"
-                                        sx={{marginLeft: 0.3, marginBottom: 0.5, fontSize: 14, fontWeight: 'bold'}}>
+                                        sx={{marginLeft: 0.3, marginBottom: 0.5, fontSize: 18, fontWeight: 'bold'}}>
                                 View on:
                             </Typography>
                             <Stack alignItems="flex-end" direction="row" spacing={1}
                                    sx={{position: 'relative', zIndex: 30}}>
                                 {urls.map((url) => (
                                     <Chip avatar={<Avatar src={url.image}/>} component="button"
-                                          label={url.name} clickable href={url.url} key={url.name} sx={{
+                                          label={url.name} clickable href={url.url} target="_blank"
+                                          rel="noopener noreferrer" key={url.name} sx={{
                                         color: 'black',
                                         bgcolor: 'rgba(255,255,255,0.7)',
                                         borderColor: 'black',
@@ -112,7 +135,7 @@ export function MovieCard({title, release, description, image, rating, duration,
                 <CardMedia
                     component="img"
                     sx={{
-                        display: rating < 5 || rating > 8 ? 'block' : 'none',
+                        display: (rating < 5 && rating > 0.1) || rating > 8 ? 'block' : 'none',
                         marginLeft: rating > 8 ? 20 : 20,
                         marginTop: rating > 8 ? 34 : 40,
                         width: rating > 8 ? 200 : 150,
@@ -123,7 +146,7 @@ export function MovieCard({title, release, description, image, rating, duration,
                         left: 0,
                         zIndex: 25,
                     }}
-                    image={rating > 8 ? "../../public/fire.png" : rating > 5 ? null : "../../public/fish.png"}
+                    image={rating > 8 ? "../../public/fire.png" : rating > 5 ? null : rating > 0.1 ? "../../public/fish.png" : null}
                 />
 
                 {/* Gradient overlay for fading effect on the edges */}
