@@ -29,12 +29,12 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
         # if the parameter is not provided, return an error
         if q is None:
             return Response({"error": "missing query parameter 'q'"})
-        
-        page_size = settings.REST_FRAMEWORK['PAGE_SIZE']
-        page = request.query_params.get('page', 1)
-        end = page * page_size
 
-        docnos = perform_search(q, end)
+        page_size = settings.REST_FRAMEWORK['PAGE_SIZE']
+        page = int(request.query_params.get('page', 1))
+        next_end = (page + 1) * page_size  # always show a next page
+
+        docnos = perform_search(q, next_end)
         queryset = Movie.retrieve_sorted(docnos)
         return queryset
 

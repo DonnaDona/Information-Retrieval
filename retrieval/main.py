@@ -23,7 +23,7 @@ def retrieve():
     index = retriever.load_index(INDEX_PATH)
     print(index.getCollectionStatistics())
 
-    query = "the matrix"
+    query = "The Matrix"
     result_set = retriever.perform_query(index, query)
     print(result_set)
 
