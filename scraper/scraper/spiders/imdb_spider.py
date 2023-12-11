@@ -6,7 +6,7 @@ import scrapy
 from scrapy.http import Response
 
 from .utils import parse_duration
-from ..items import Review, Movie, Plot
+from ..items import Review, Movie, Plot, Reviews
 
 
 class IMDBSpider(scrapy.Spider):
@@ -19,20 +19,7 @@ class IMDBSpider(scrapy.Spider):
 
     start_urls = ["https://www.imdb.com/search/title/?title_type=feature,tv_movie&count=250"]
 
-    REVIEWS_LIMIT = 1000  # The API returns at most 1000 reviews
-
-    def reviews_api_url(self, movie_slug, datakey=None):
-        """
-        Generate the URL for the API that returns the reviews of a movie.
-
-        :param movie_slug: the slug of the movie, i.e. the part of the URL that identifies the movie
-        :param datakey: the offset of the reviews to return, expressed as a string found in the HTML of reviews page
-        :return: the URL of the API
-        """
-        url = f"{self._DOMAIN}/title/{movie_slug}/reviews/_ajax?sort=reviewVolume&dir=desc&ratingFilter=0"
-        if datakey:
-            url = f"{url}&dataKey={datakey}"
-        return url
+    REVIEWS_LIMIT = 50  # The API returns at most 1000 reviews
 
     def get_movie_id(self, url: str) -> str:
         """
@@ -66,24 +53,44 @@ class IMDBSpider(scrapy.Spider):
         rest_url = current_movie_url.split("/")[5:]
         return f"{self._DOMAIN}/title/tt{next_movie_id}/{'/'.join(rest_url)}"
 
-    def extract_reviews(self, response: Response, extracted: int = 0) -> Generator[Review, None, None]:
+    def reviews_api_url(self, movie_slug, datakey=None):
+        """
+        Generate the URL for the API that returns the reviews of a movie.
+
+        :param movie_slug: the slug of the movie, i.e. the part of the URL that identifies the movie
+        :param datakey: the offset of the reviews to return, expressed as a string found in the HTML of reviews page
+        :return: the URL of the API
+        """
+        url = f"{self._DOMAIN}/title/{movie_slug}/reviews/_ajax?sort=reviewVolume&dir=desc&ratingFilter=0"
+        if datakey:
+            url = f"{url}&paginationKey={datakey}"
+        return url
+
+    def extract_reviews(self, response: Response, extracted: int = 0) -> Generator[Reviews, None, None]:
         """
         Extract the reviews from a movie page.
 
         :param response: the response of the movie page
         :param extracted: the number of reviews extracted so far for the current movie
-        :return: a `Movie` with the reviews of the movie
+        :return: a generator of reviews for the movie
         """
-        reviews = response.xpath("//div[@class='lister-item-content']")
+        reviews = response.css("div.lister-item")
+        reviews_list = []
         for review in reviews:
+            review_id = review.xpath("./@data-review-id").get()
             score = review.xpath(
                 ".//div[@class='ipl-ratings-bar']//span[@class='rating-other-user-rating']//span//text()").get()
+            title = review.xpath(".//a[@class='title']/text()").get().strip()
             text = '\n'.join(review.xpath(".//div[@class='text show-more__control']/text()").getall())
-            permalink = review.xpath(".//div[@class='actions text-muted']/a/@href").get()
-            if score and text and permalink:
+            if score and text:
                 extracted += 1
-                yield Review(url=f"{self._DOMAIN}{permalink}", movie_id=self.get_movie_id(response.url), score=score,
-                             text=text)
+                reviews_list.append(
+                    Review(movie_id=self.get_movie_id(response.url), score=float(score), title=title, content=text,
+                           source_name="IMDb", id=review_id))
+                if extracted >= self.REVIEWS_LIMIT:
+                    break
+        if len(reviews_list) > 0:
+            yield Reviews(reviews=reviews_list)
         next_datakey = response.xpath("//div[@class='load-more-data']/@data-key")
 
         current_movie_id = self.get_movie_id(response.url)
@@ -145,7 +152,7 @@ class IMDBSpider(scrapy.Spider):
                 genres = response.xpath("//div[@data-testid='genres']").css("a.ipc-chip span::text").getall()
                 score = float(response.css("span.cMEQkK::text").get() or float('nan'))
 
-                # get all the a text of the first li of the first ul with class ipc-metadata-list 
+                # get all the a text of the first li of the first ul with class ipc-metadata-list
                 directors = response.css("ul.ipc-metadata-list")[0].css("li")[0].css("a::text").getall()
                 actors = response.css("a.gCQkeh::text").getall()
 
@@ -160,6 +167,12 @@ class IMDBSpider(scrapy.Spider):
                 yield response.follow(f"{self._DOMAIN}/title/tt{movie_id}/plotsummary/", callback=self.parse_plot,
                                       priority=2,  # highest priority: the plot is the most important information now
                                       cb_kwargs={"movie_id": movie_id})
+
+                yield response.follow(self.reviews_api_url(f"tt{movie_id}"), callback=self.extract_reviews, priority=2,
+                                      # high priority: the reviews are important
+                                      cb_kwargs={"extracted": 0})
+
+
             except Exception as e:
                 # the movie could not be parsed, but the walk should continue
                 logging.error(f"Error while parsing movie {movie_id}: {e}")

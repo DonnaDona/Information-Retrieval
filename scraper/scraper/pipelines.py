@@ -2,7 +2,6 @@
 #
 # Order of the pipelines:
 # MergePipeline -> FormatPipeline -> PostgresPipeline
-import os
 
 import psycopg2
 from dotenv import load_dotenv
@@ -10,39 +9,26 @@ from scrapy import Spider
 from scrapy.exceptions import DropItem
 
 from .items import Movie, Plot
-from .items import Review
+from .items import Reviews
+from .utils import setup_postgres_connection
 
 
 class PostgresPipeline:
     WHITELIST = ["imdb", "metacritic", "rottentomatoes"]
 
-    def __setup_connection__(self):
-        hostname = os.environ["DB_HOST"]
-        username = os.environ["DB_USER"]
-        password = os.environ["DB_PASSWORD"]
-        database = os.environ["DB_NAME"]
-
-        ## Create/Connect to database
-        self.connection = psycopg2.connect(host=hostname, user=username, password=password, dbname=database)
-
-        ## Create cursor, used to execute commands
-        self.cur = self.connection.cursor()
-
     def __init__(self):
         load_dotenv("../.env")
 
-        self.connection = None
-        self.cur = None
-
-        self.__setup_connection__()
+        self.connection, self.cur = setup_postgres_connection()
 
         self.cur.execute("""
             CREATE TABLE IF NOT EXISTS reviews(
-                id serial PRIMARY KEY, 
-                url text NOT NULL,
+                id varchar (48) PRIMARY KEY, 
+                movie_id integer NOT NULL,
+                title text NOT NULL,
+                content text,
                 score float4,
-                title varchar (255) NOT NULL,
-                content text
+                CONSTRAINT fk_movie_id FOREIGN KEY (movie_id) REFERENCES movies(id)
             )
             """)
 
@@ -77,11 +63,22 @@ class PostgresPipeline:
             )
             """)
 
-    def process_review(self, item: Review):
-        self.cur.execute("""
-            INSERT INTO reviews (url, score, title, content) 
-            VALUES (%s, %s, %s, %s)
-        """, (item.url, item.score, item.title, item.text))
+    def process_reviews(self, items: Reviews):
+        # retrieve the id in the database of the movie based on data_sources
+        self.cur.execute("""SELECT movie_id FROM data_sources WHERE movie_source_uid = %s AND name = %s""",
+                         (items.reviews[0].movie_id, items.reviews[0].source_name))
+        movie_id = self.cur.fetchone()
+
+        if movie_id is None:
+            raise ValueError("Movie not found in database")
+
+        movie_id = movie_id[0]
+
+        # insert the reviews
+        for item in items.reviews:
+            self.cur.execute("""
+                INSERT INTO reviews (id, movie_id, title, content, score) VALUES (%s, %s, %s, %s, %s)
+            """, (item.id, movie_id, item.title, item.content, item.score))
 
     def process_movie(self, item: Movie):
         """
@@ -165,10 +162,12 @@ class PostgresPipeline:
             if isinstance(item, Movie):
                 self.process_movie(item)
             else:
-                self.process_review(item)
+                self.process_reviews(item)
         except psycopg2.InterfaceError as e:
             print("Connection to database lost: ", e)
-            self.__setup_connection__()
+
+            self.connection, self.cur = setup_postgres_connection()
+
             if not retried:
                 return self.process_item(item, spider, retried=True)
             return None

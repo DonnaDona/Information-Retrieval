@@ -6,16 +6,27 @@
 from dataclasses import dataclass
 from typing import List
 
-import scrapy
+
+@dataclass
+class Review:
+    movie_id: str
+    id: str  # the id of the review (unique in the `source_name` website)
+    title: str
+    score: float
+    content: str
+    source_name: str
 
 
 @dataclass
-class Review(scrapy.Item):
-    movie_id: str
-    url: str
-    score: float
-    title: str
-    text: str
+class Reviews:
+    """
+    A list of reviews for a movie.
+
+    This object, containing a list of Review objects is yield in the spiders, instead of individual Review objects.
+    This way, `PostgresPipeline` can insert multiple reviews with a single transaction, instead of one by one, which
+    is much faster.
+    """
+    reviews: List[Review]
 
 
 @dataclass
