@@ -15,17 +15,17 @@ export function MovieResults() {
     const query = searchParams.get("q", "");
 
     const [items, setItems] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [visibleError, setVisibleError] = useState(false);
-    const [nextUrl, setNextUrl] = useState(null);
+    const [nextUrl, setNextUrl] = useState(`/search/?q=${query}&page=1`);
 
     const fetchData = async () => {
         setIsLoading(true);
         setError(null);
 
         try {
-            const url = nextUrl || `/search/?q=${query}`;
+            const url = nextUrl;
             const response = await axios.get(url);
             setItems([...items, ...response.data.results]);
             setNextUrl(response.data.next);
