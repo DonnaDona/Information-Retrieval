@@ -24,7 +24,7 @@ def create_index_serverside(index_path, ss_iterator, meta=None):
     import time
     from datetime import datetime
 
-    indexing_pipeline = pt.IterDictIndexer(index_path, meta=meta, overwrite=True, blocks=True)
+    indexing_pipeline = pt.IterDictIndexer(index_path, meta=meta, overwrite=False, blocks=True)
 
     start_time = time.time()
     print(f"Starting indexing at {datetime.now()}")
