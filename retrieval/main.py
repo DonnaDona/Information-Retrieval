@@ -1,11 +1,12 @@
 import dotenv
+import pandas as pd
 import pyterrier as pt
 
 import indexer
-import loader
 import retriever
+from retriever import INDEX_PATH
+import loader
 
-INDEX_PATH = "./index"
 
 
 def index():
@@ -13,8 +14,9 @@ def index():
 
     pt.init()
 
+    ss_iterator = iter(loader.ServerSideMovieLoader())
     # Creating an index
-    indexer.create_index_serverside(INDEX_PATH, meta={"docno": 20})
+    indexer.create_index_serverside(INDEX_PATH, ss_iterator, meta={"docno": 20, "genres": 100})
 
 
 def retrieve():
@@ -22,7 +24,7 @@ def retrieve():
     index = retriever.load_index(INDEX_PATH)
     print(index.getCollectionStatistics())
 
-    query = "best spider man movie ever"
+    query = "The Matrix"
     result_set = retriever.perform_query(index, query)
     print(result_set)
 
