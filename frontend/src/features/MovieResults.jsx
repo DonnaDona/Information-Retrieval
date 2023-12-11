@@ -1,4 +1,4 @@
-import React from 'react'
+import React, {useEffect} from 'react'
 import {Stack} from "@mui/material";
 import {TopBar} from "../components/TopBar.jsx";
 import {MovieCard} from "../components/MovieCard.jsx";
@@ -15,23 +15,30 @@ export function MovieResults() {
     dispatch(setQuery(searchParams.get("q", "")));
 
 
-    axios.get(`/search?q=${searchParams.get("q", "")}`)
-        .then((response) => {
-            setMovieData(response.data);
-        })
-        .catch((error) => {
-            console.error(error);
-        });
+    useEffect(()=>{
+        axios.get(`/search?q=${searchParams.get("q", "")}`)
+            .then((response) => {
+                console.log(response.data.results);
+                setMovieData(response.data.results);
+            })
+            .catch((error) => {
+                console.error(error);
+            });
+    },[]);
 
-    const formatMovieUrls = (movie) => [
-        {name: "IMDB", url: movie.urls?.imdb, image: "../../public/imdb.png"},
-        {name: "Metacritic", url: movie.urls?.metacritic, image: "../../public/metacritic.png"},
-        {
-            name: "Rotten Tomatoes",
-            url: movie.urls?.rotten_tomatoes,
-            image: "../../public/tomato.png"
+    const formatMovieUrls = (movie) => {
+        const names =["imdb", "metacritic", "rotten tomatoes"];
+        const images = {"imdb": "../../public/imdb.png", "metacritic": "../../public/metacritic.png", "rotten tomatoes": "../../public/tomato.png"};
+        const upper_names = {"imdb": "IMDb", "metacritic": "Metacritic", "rotten tomatoes": "RT"};
+        const urls = [];
+        console.log(movie.data_sources);
+        for (const name of names) {
+            if (movie.data_sources?.[name]) {
+                urls.push({name: upper_names[name], url: movie.data_sources?.[name], image: images[name]});
+            }
         }
-    ];
+        return urls;
+    }
 
     return (
         <Stack>
@@ -42,8 +49,8 @@ export function MovieResults() {
                         key={index}
                         title={movie.title}
                         release={movie.release}
-                        description={movie.description.split(" ").slice(0, 10).join(" ") + "..."}
-                        image={movie.image || "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/600px-No_image_available.svg.png"}
+                        description={movie.description}
+                        image={movie.image_url || "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/600px-No_image_available.svg.png"}
                         rating={movie.rating}
                         duration={movie.duration !== null ? movie.duration : ""}
                         genres={movie.genres}

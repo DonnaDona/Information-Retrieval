@@ -28,7 +28,7 @@ export function MovieCard({title, release, description, image, rating, duration,
                         width: '100%',
                         height: '100%',
                         objectPosition: 'top',
-                        objectFit: 'contain',
+                        objectFit: 'cover',
                         borderRadius: roundness,
                         borderBottomRightRadius: 0,
                         borderBottomLeftRadius: 0,
@@ -94,7 +94,7 @@ export function MovieCard({title, release, description, image, rating, duration,
                                    sx={{position: 'relative', zIndex: 30}}>
                                 {urls.map((url) => (
                                     <Chip avatar={<Avatar src={url.image}/>} component="button"
-                                          label={url.name} clickable href={url.url} key={url} sx={{
+                                          label={url.name} clickable href={url.url} key={url.name} sx={{
                                         color: 'black',
                                         bgcolor: 'rgba(255,255,255,0.7)',
                                         borderColor: 'black',
