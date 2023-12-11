@@ -1,7 +1,7 @@
 import React from 'react';
 import {Avatar, Box, Card, CardMedia, Chip, Rating, Stack, Typography, useMediaQuery, useTheme} from "@mui/material";
 
-export function MovieCard({title, release, description, image, rating, duration, genres, urls}) {
+export function MovieCard({title, release, description, image, rating, duration, genres, urls, height=500, width=300}) {
     const roundness = 4;
     const [hover, setHover] = React.useState(false);
     const theme = useTheme();
@@ -25,8 +25,8 @@ export function MovieCard({title, release, description, image, rating, duration,
             onMouseLeave={() => setHover(false)}
             onClick={() => setHover(!hover)}
             sx={{
-                width: 300,
-                height: 500,
+                width: `${width}px!important`,
+                height: `${height}px!important`,
                 padding: 0,
                 margin: 1.6,
                 marginBottom: 4,
@@ -113,7 +113,8 @@ export function MovieCard({title, release, description, image, rating, duration,
                                 View on:
                             </Typography>
                             <Stack alignItems="flex-end" direction="row" spacing={1}
-                                   sx={{position: 'relative', zIndex: 30}}>
+                                   flexWrap={"wrap"}
+                                   sx={{position: 'relative', zIndex: 30, gap: '8px'}}>
                                 {urls.map((url) => (
                                     <Chip avatar={<Avatar src={url.image}/>} component="button"
                                           label={url.name} clickable href={url.url} target="_blank"
@@ -146,7 +147,7 @@ export function MovieCard({title, release, description, image, rating, duration,
                         left: 0,
                         zIndex: 25,
                     }}
-                    image={rating > 8 ? "../../public/fire.png" : rating > 5 ? null : rating > 0.1 ? "../../public/fish.png" : null}
+                    image={rating > 8 ? "/fire.png" : rating > 5 ? null : rating > 0.1 ? "/fish.png" : null}
                 />
 
                 {/* Gradient overlay for fading effect on the edges */}
