@@ -1,1 +1,2 @@
-from .. import retrieval
+import sys
+sys.path.insert(1, '../')
