@@ -30,7 +30,7 @@ def retrieve():
 
 
 def main():
-    # index()
+    index()
     retrieve()
 
 
