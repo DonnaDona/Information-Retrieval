@@ -1,7 +1,7 @@
-from .views import MovieViewSet, test
+from .views import MovieSearchViewSet, MovieViewSet
 from django.urls import path
 
 urlpatterns = [
-    path('search/', MovieViewSet.as_view({'get': 'list'})),
-    path('test/', test)
+    path('search/', MovieSearchViewSet.as_view({'get': 'list'})),
+    path('recommend/', MovieViewSet.as_view({'get': 'list'})),
 ]

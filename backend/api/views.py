@@ -1,3 +1,4 @@
+import pandas as pd
 from rest_framework.views import APIView
 
 from core.models import Movie, DataSource
@@ -10,14 +11,14 @@ from django.conf import settings
 
 from .serializers import MovieSerializer, DataSourceSerializer
 
-from .services import perform_search
+from .services import perform_search, retrieve_recommended
 
 
 # create a viewset for the Movie model
 # movies can be retrieved only as a list through a request that as a "q" query parameter, which will be used to filter
 # the movies by title
 
-class MovieViewSet(viewsets.ReadOnlyModelViewSet):
+class MovieSearchViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
 
@@ -39,5 +40,19 @@ class MovieViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-def test(request):
-    return HttpResponse("Hello, world. You're at the api test page.")
+class MovieViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Movie.objects.all()
+    serializer_class = MovieSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        request = self.request
+        q = request.query_params.get('q', None)
+        if q is None:
+            return Response({"error": "missing query parameter 'q'"})
+
+        docnos = retrieve_recommended(q)
+
+        qs = Movie.retrieve_sorted(docnos)
+
+        return qs

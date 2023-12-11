@@ -21,12 +21,13 @@ def setup_postgres_connection(cursor_name=None):
 def format_movie_data_df(movie_data):
     movie_data["duration"] = movie_data["duration"].apply(lambda x: f"{x // 60} hours {x % 60} minutes")
     movie_data["reviews"] = movie_data["reviews"].apply(lambda x: "  ".join(x) if x and all(x) else "")
+    movie_data["urls"] = movie_data["urls"].apply(lambda x: "  ".join(x) if x and all(x) else "")
+    movie_data["page_titles"] = movie_data["page_titles"].apply(lambda x: "  ".join(x) if x and all(x) else "")
+    movie_data["genres"] = movie_data["genres"].apply(lambda x: "  ".join(x) if x and all(x) else "")
     return movie_data
 
 def format_movie_data_dict(movie_data):
-    movie_data["duration"] = f"{movie_data['duration'] // 60} hours {movie_data['duration'] % 60} minutes"
-    movie_data["reviews"] = "  ".join(movie_data["reviews"]) if movie_data["reviews"] and all(movie_data["reviews"]) else ""
-    return movie_data
+    return format_movie_data_df(pd.DataFrame([movie_data])).to_dict(orient="records")[0]
 
 DEFAULT_FIELDS = ["docno", "title", "description", "release", "duration", "genres", "directors", "actors", "plot", "urls",
                   "page_titles", "reviews"]

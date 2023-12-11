@@ -1,11 +1,12 @@
 import dotenv
+import pandas as pd
 import pyterrier as pt
 
 import indexer
 import retriever
+from retriever import INDEX_PATH
 import loader
 
-INDEX_PATH = "./index"
 
 
 def index():
@@ -15,7 +16,7 @@ def index():
 
     ss_iterator = iter(loader.ServerSideMovieLoader())
     # Creating an index
-    indexer.create_index_serverside(INDEX_PATH, ss_iterator, meta={"docno": 20})
+    indexer.create_index_serverside(INDEX_PATH, ss_iterator, meta={"docno": 20, "genres": 100})
 
 
 def retrieve():
@@ -29,7 +30,7 @@ def retrieve():
 
 
 def main():
-    index()
+    # index()
     retrieve()
 
 
