@@ -62,9 +62,9 @@ export function MovieResults() {
     const formatMovieUrls = (movie) => {
         const names = ["imdb", "metacritic", "rotten tomatoes"];
         const images = {
-            "imdb": "../../public/imdb.png",
-            "metacritic": "../../public/metacritic.png",
-            "rotten tomatoes": "../../public/tomato.png"
+            "imdb": "/imdb.png",
+            "metacritic": "/metacritic.png",
+            "rotten tomatoes": "/tomato.png"
         };
         const upper_names = {"imdb": "IMDb", "metacritic": "Metacritic", "rotten tomatoes": "RT"};
         const urls = [];
@@ -113,7 +113,7 @@ export function MovieResults() {
                                 key={index}
                                 title={movie.title}
                                 release={movie.release}
-                                description={movie.description}
+                                description={movie.description.substring(0, 200) + "..."}
                                 image={movie.image_url || "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/600px-No_image_available.svg.png"}
                                 rating={formatMovieRating(movie)}
                                 duration={movie.duration !== null ? movie.duration : ""}
@@ -123,7 +123,7 @@ export function MovieResults() {
                         ))}
                     </Stack>}
                 {items.length === 0 && !isLoading && <Stack justifyContent="center" alignItems="center" marginTop={24}>
-                    <img src="../../public/no-results.png" alt="logo" width="300" height="310"/>
+                    <img src="/no-results.png" alt="logo" width="300" height="310"/>
                     <Typography component="h2" variant="span" marginTop={4}>No results found</Typography>
                 </Stack>}
             </Stack>

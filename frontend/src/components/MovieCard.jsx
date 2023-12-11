@@ -146,7 +146,7 @@ export function MovieCard({title, release, description, image, rating, duration,
                         left: 0,
                         zIndex: 25,
                     }}
-                    image={rating > 8 ? "../../public/fire.png" : rating > 5 ? null : rating > 0.1 ? "../../public/fish.png" : null}
+                    image={rating > 8 ? "/fire.png" : rating > 5 ? null : rating > 0.1 ? "/fish.png" : null}
                 />
 
                 {/* Gradient overlay for fading effect on the edges */}

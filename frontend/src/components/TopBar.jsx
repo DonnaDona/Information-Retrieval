@@ -9,7 +9,7 @@ export function TopBar() {
         <Box sx={{flexGrow: 1}}>
             <AppBar elevation={1} position="static" sx={{bgcolor: "white", padding: 0.5}}>
                 <Toolbar>
-                    <a href={'/'}><Avatar sx={{width: 40, height: 50, marginLeft: 1}} src="../../public/robotLogo.svg"/></a>
+                    <a href={'/'}><Avatar sx={{width: 40, height: 50, marginLeft: 1}} src="/robotLogo.svg"/></a>
                     <Box paddingLeft={4}>
                         <TextInput/>
                     </Box>
